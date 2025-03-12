@@ -8,3 +8,6 @@ python-multipart
 sentence-transformers
 fastapi
 uvicorn
+request
+beautifulsoup4
+streamlit
