@@ -1,7 +1,8 @@
 import requests
 import streamlit as st
 
-def get_api_response(question, session_id, model):
+
+def get_api_response(question, session_id, model, selected_sites):
     headers = {
         'accept': 'application/json',
         'Content-Type': 'application/json'
@@ -14,6 +15,13 @@ def get_api_response(question, session_id, model):
         data["session_id"] = session_id
 
     try:
+        print (selected_sites)
+        if selected_sites != []:
+            forums_search(headers=headers, data=data)
+        else:
+             print(f"Not searching forums")
+             #return None
+
         response = requests.post("http://localhost:8000/chat", headers=headers, json=data)
         if response.status_code == 200:
             return response.json()
@@ -23,6 +31,19 @@ def get_api_response(question, session_id, model):
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
         return None
+    
+def forums_search(headers, data):
+    print("Parsing forums...")
+    try:
+        response = requests.post("http://localhost:8000/forums-search", headers=headers, json=data)
+        if response.status_code == 200:
+            return True
+        else:
+            st.error(f"Failed to search forums: {response.status_code} - {response.text}")
+            return None
+    except Exception as e:
+        st.error(f"An error occurred while uploading the file: {str(e)}")
+        return None    
 
 def upload_document(file):
     print("Uploading file...")

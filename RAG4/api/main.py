@@ -7,6 +7,7 @@ import os
 import uuid
 import logging
 import shutil
+from chroma_utils import process_and_store_texts
 
 logging.basicConfig(filename='app.log', level=logging.INFO)
 
@@ -17,18 +18,37 @@ def chat(query_input: QueryInput):
     session_id = query_input.session_id or str(uuid.uuid4())
     logging.info(f"Session ID: {session_id}, User Query: {query_input.question}, , Model: {query_input.model.value}")
     
+
+    #upload_parsed_document(question=query_input.question)
+
     chat_history = get_chat_history(session_id)
     rag_chain = get_rag_chain(query_input.model.value)
-    answer = rag_chain.invoke({
+    result = rag_chain.invoke({
         "input": query_input.question,
         "chat_history": chat_history
-    })['answer']
+    })
+    answer = result["answer"]
+    for i, doc in enumerate( result.get("context", [])):
+       print(f"Документ {i+1}: {doc.page_content[:200]}...")
 
     insert_application_logs(session_id, query_input.question, answer, query_input.model.value)
     logging.info(f"Session ID: {session_id}, AI Response: {answer}")
     return QueryResponse(answer=answer, session_id=session_id, model=query_input.model)
 
+@app.post("/forums-search")
+def upload_parsed_document(query_input: QueryInput):
 
+    question = query_input.question
+    success = process_and_store_texts(question)
+    file_id = insert_document_record(question)
+
+    if success:
+        return {"message": f"File {question} has been successfully uploaded and indexed.", "file_id": file_id}
+    else:
+        delete_document_record(file_id)
+        raise HTTPException(status_code=500, detail=f"Failed to index {question}.")
+    
+'''
 @app.post("/upload-doc")
 def upload_and_index_document(file: UploadFile = File(...)):
     allowed_extensions = ['.pdf', '.docx', '.html']
@@ -71,3 +91,5 @@ def delete_document(request: DeleteFileRequest):
             return {"error": f"Deleted from Chroma but failed to delete document with file_id {request.file_id} from the database."}
     else:
         return {"error": f"Failed to delete document with file_id {request.file_id} from Chroma."}
+
+'''

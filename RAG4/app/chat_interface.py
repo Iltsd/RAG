@@ -1,7 +1,8 @@
 import streamlit as st
 from api_utils import get_api_response
 
-def display_chat_interface():
+
+def display_chat_interface(selected_sites):
     # Chat interface
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
@@ -13,7 +14,7 @@ def display_chat_interface():
             st.markdown(prompt)
 
         with st.spinner("Generating response..."):
-            response = get_api_response(prompt, st.session_state.session_id, st.session_state.model)
+            response = get_api_response(prompt, st.session_state.session_id, st.session_state.model, selected_sites)
             
             if response:
                 st.session_state.session_id = response.get('session_id')

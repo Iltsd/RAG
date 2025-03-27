@@ -1,11 +1,26 @@
 import streamlit as st
 from api_utils import upload_document, list_documents, delete_document
 
+selected_sites = []
+
 def display_sidebar():
+
+    st.sidebar.header("Настройки поиска")
+
     # Sidebar: Model Selection
-    model_options = ["llama3.2", "gpt-4o", "gpt-4o-mini"]
+    model_options = ["llama3.2", "llama3.1", "gpt-4o", "gpt-4o-mini"]
     st.sidebar.selectbox("Select Model", options=model_options, key="model")
 
+    # Sidebar: Forums Selection
+    forums_options = ["Stackoverflow", "Reddit"]
+    selected_sites = st.sidebar.multiselect(
+        "Выберите сайты для поиска",
+        options=forums_options,
+        default=[],
+        max_selections=2
+    )
+    return selected_sites
+'''
     # Sidebar: Upload Document
     st.sidebar.header("Upload Document")
     uploaded_file = st.sidebar.file_uploader("Choose a file", type=["pdf", "docx", "html"])
@@ -42,3 +57,4 @@ def display_sidebar():
                     st.session_state.documents = list_documents()  # Refresh the list after deletion
                 else:
                     st.sidebar.error(f"Failed to delete document with ID {selected_file_id}.")
+'''
