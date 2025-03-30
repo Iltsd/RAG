@@ -7,7 +7,7 @@ import os
 import uuid
 import logging
 import shutil
-from chroma_utils import process_and_store_texts
+from chroma_utils import search_forum
 
 logging.basicConfig(filename='app.log', level=logging.INFO)
 
@@ -39,7 +39,9 @@ def chat(query_input: QueryInput):
 def upload_parsed_document(query_input: QueryInput):
 
     question = query_input.question
-    success = process_and_store_texts(question)
+    selected_sites =query_input.selected_sites
+    print(question, selected_sites)
+    success = search_forum(question, selected_sites)
     file_id = insert_document_record(question)
 
     if success:

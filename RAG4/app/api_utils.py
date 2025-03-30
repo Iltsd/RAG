@@ -13,6 +13,9 @@ def get_api_response(question, session_id, model, selected_sites):
     }
     if session_id:
         data["session_id"] = session_id
+    if selected_sites != []:
+        data["selected_sites"] = selected_sites
+    
 
     try:
         print (selected_sites)

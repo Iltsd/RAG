@@ -62,3 +62,66 @@ def search_stackoverflow(query: str):
     
     print(f"Итоговый список текстов: {combined_text}")  # Отладка
     return combined_text
+
+def search_reddit(query: str):
+    # URL для поиска на Reddit
+    url = "https://www.reddit.com/search/"
+    params = {
+        "q": query,           # Запрос поиска
+        "sort": "relevance",  # Сортировка по релевантности
+        "t": "all"            # Временной диапазон: все время
+    }
+    
+    # Заголовки для имитации браузера (Reddit может блокировать запросы без User-Agent)
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    }
+    
+    # Выполняем запрос к странице поиска
+    response = requests.get(url, params=params, headers=headers)
+    
+    if response.status_code != 200:
+        raise Exception(f"Ошибка запроса: {response.status_code}")
+    
+    data = response.json()
+    combined_text = []
+    
+    print(f"Найдено элементов в API: {len(data['items'])}")  # Отладка
+    for post in posts[:5]:  # Ограничиваем до 5 постов, как в StackOverflow
+        try:
+            # Извлекаем заголовок
+            title_elem = post.find('h3')
+            title = title_elem.get_text(strip=True) if title_elem else "No title"
+            
+            # Извлекаем текст поста (если есть)
+            content_elem = post.find('div', class_="s-prose")  # Класс может отличаться
+            content = content_elem.get_text(strip=True) if content_elem else "No content"
+            
+            # Извлекаем ссылку на пост
+            link_elem = post.find('a', href=True)
+            post_url = "https://www.reddit.com" + link_elem['href'] if link_elem else None
+            
+            if post_url:
+                # Запрос к полной странице поста для получения комментариев
+                post_response = requests.get(post_url, headers=headers)
+                if post_response.status_code != 200:
+                    print(f"Не удалось загрузить страницу {post_url}")
+                    continue
+                
+                post_soup = BeautifulSoup(post_response.text, 'lxml')
+                # Находим лучший комментарий (например, первый с высоким рейтингом)
+                top_comment_elem = post_soup.find('div', class_="Comment")  # Класс может отличаться
+                top_comment = top_comment_elem.get_text(strip=True) if top_comment_elem else "No comments"
+                
+                if content or top_comment:
+                    combined_text.append(f"Title: {title}\nPost: {content}\nTop Comment: {top_comment}")
+                    print(f"Добавлен текст для {post_url}")  # Отладка
+                else:
+                    print(f"Не найден текст поста или комментариев для {post_url}")
+            else:
+                print(f"Не найдена ссылка для поста с заголовком: {title}")
+        except Exception as e:
+            print(f"Ошибка при обработке поста: {e}")
+    
+    print(f"Итоговый список текстов: {combined_text}")  # Отладка
+    return combined_text

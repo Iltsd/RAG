@@ -4,7 +4,7 @@ from langchain_community.embeddings.sentence_transformer import SentenceTransfor
 from langchain_chroma import Chroma
 from typing import List
 from langchain_core.documents import Document
-from parser import search_stackoverflow
+from parser import search_stackoverflow, search_reddit
 
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200, length_function=len)
 
@@ -52,11 +52,20 @@ def delete_doc_from_chroma(file_id: int):
         return False
     
 
-def process_and_store_texts(question):
-    try:
-        texts = search_stackoverflow(question)
-        print(f"Получено текстов: {len(texts)}")  # Отладка
-        
+def search_forum(query, selected_sites):
+    sucsess = False
+    for site in selected_sites:
+        if site == "Stackoverflow":
+            texts = search_stackoverflow(query)
+            sucsess = process_and_store_texts('Stackoverflow', texts)
+        if site == "Reddit":
+            texts = search_reddit(query)
+            sucsess = process_and_store_texts('Reddit', texts)
+    return sucsess
+            
+    
+def process_and_store_texts(site, texts):
+    try: 
         if not texts:
             print("Нет данных для обработки")
             return False
@@ -67,13 +76,11 @@ def process_and_store_texts(question):
                 print(f"Пропущен некорректный элемент: {text}, тип: {type(text)}")
                 continue
             chunks = text_splitter.split_text(text)
-            print(f"Чанки для текста '{text[:50]}...': {len(chunks)}")  # Отладка
             for i, chunk in enumerate(chunks):
-                documents.append(Document(page_content=chunk, metadata={"source": "StackOverflow"}))
+                documents.append(Document(page_content=chunk, metadata={"source": f"{site}"}))
         
         if documents:
             vectorstore.add_documents(documents)
-            print(f"Добавлено {len(documents)} чанков в ChromaDB")
             return True
         else:
             print("Нет чанков для добавления")
