@@ -1,22 +1,10 @@
 from bs4 import BeautifulSoup
 import requests
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings.sentence_transformer import SentenceTransformerEmbeddings
-from langchain_chroma import Chroma
-import numpy as np
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
-from langchain_core.documents import Document
+import time
+from selenium import webdriver
 
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200, length_function=len)
 
-embedding_function = SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
-model = SentenceTransformer("all-MiniLM-L6-v2")
 
-vectorstore = Chroma(persist_directory="./chroma_db", embedding_function=embedding_function)
-
-from bs4 import BeautifulSoup
-import requests
 
 def search_stackoverflow(query: str):
     url = "https://api.stackexchange.com/2.3/search/advanced"
@@ -51,7 +39,7 @@ def search_stackoverflow(query: str):
             if right_answer:
                 text = right_answer.find('div', class_="s-prose js-post-body")
                 if text and text.get_text(strip=True):
-                    combined_text.append(f"Title: {item['title']}\nQuestion: {question.get_text()}\nAnswer: {text.get_text(strip=True)}")
+                    combined_text.append(f"Title: {item['title']}\nLink: {item['link']}\nQuestion: {question.get_text()}\nAnswer: {text.get_text(strip=True)}")
                     print(f"Добавлен текст для {url}")  # Отладка
                 else:
                     print(f"Не найден текст ответа для {url}")
@@ -64,29 +52,23 @@ def search_stackoverflow(query: str):
     return combined_text
 
 def search_reddit(query: str):
-    # URL для поиска на Reddit
-    url = "https://www.reddit.com/search/"
-    params = {
-        "q": query,           # Запрос поиска
-        "sort": "relevance",  # Сортировка по релевантности
-        "t": "all"            # Временной диапазон: все время
-    }
+    driver = webdriver.Chrome()  # Установите ChromeDriver
+    url = f"https://www.reddit.com/search/?q={query}"
+    driver.get(url)
+    time.sleep(3)  # Ждем загрузки контента
     
-    # Заголовки для имитации браузера (Reddit может блокировать запросы без User-Agent)
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-    }
+    soup = BeautifulSoup(driver.page_source, 'lxml')
+    driver.quit()
     
-    # Выполняем запрос к странице поиска
-    response = requests.get(url, params=params, headers=headers)
-    
-    if response.status_code != 200:
-        raise Exception(f"Ошибка запроса: {response.status_code}")
-    
-    data = response.json()
+    # Ищем посты по data-testid (как в вашем первом примере)
+    posts = soup.find_all('a', attrs={"data-testid": "post-title-text"})
     combined_text = []
     
-    print(f"Найдено элементов в API: {len(data['items'])}")  # Отладка
+    # Находим все посты на странице поиска
+    posts = soup.find_all('div', class_="text-16 xs:text-18 text-neutral-content-strong no-underline hover:no-underline visited:text-neutral-content-weak hover:no line-clamp-3 text-ellipsis font-semibold mb-xs")  # Класс может отличаться, нужно проверить актуальность
+    print(posts)
+    print(f"Найдено элементов в API: {len(posts)}")  # Отладка
+    '''
     for post in posts[:5]:  # Ограничиваем до 5 постов, как в StackOverflow
         try:
             # Извлекаем заголовок
@@ -122,6 +104,6 @@ def search_reddit(query: str):
                 print(f"Не найдена ссылка для поста с заголовком: {title}")
         except Exception as e:
             print(f"Ошибка при обработке поста: {e}")
-    
+    '''
     print(f"Итоговый список текстов: {combined_text}")  # Отладка
     return combined_text

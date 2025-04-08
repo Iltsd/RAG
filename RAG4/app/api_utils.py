@@ -1,8 +1,7 @@
 import requests
 import streamlit as st
 
-
-def get_api_response(question, session_id, model, selected_sites):
+def get_api_response(question, session_id, model):
     headers = {
         'accept': 'application/json',
         'Content-Type': 'application/json'
@@ -13,17 +12,16 @@ def get_api_response(question, session_id, model, selected_sites):
     }
     if session_id:
         data["session_id"] = session_id
-    if selected_sites != []:
+    selected_sites = st.session_state.get("selected_sites", [])
+    if selected_sites:
         data["selected_sites"] = selected_sites
     
-
     try:
-        print (selected_sites)
-        if selected_sites != []:
+        print(selected_sites)
+        if selected_sites:
             forums_search(headers=headers, data=data)
         else:
-             print(f"Not searching forums")
-             #return None
+            print(f"Not searching forums")
 
         response = requests.post("http://localhost:8000/chat", headers=headers, json=data)
         if response.status_code == 200:
@@ -34,9 +32,9 @@ def get_api_response(question, session_id, model, selected_sites):
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
         return None
-    
+
 def forums_search(headers, data):
-    print("Parsing forums...")
+    print("Parsing forums..." + data["question"])
     try:
         response = requests.post("http://localhost:8000/forums-search", headers=headers, json=data)
         if response.status_code == 200:
@@ -45,7 +43,7 @@ def forums_search(headers, data):
             st.error(f"Failed to search forums: {response.status_code} - {response.text}")
             return None
     except Exception as e:
-        st.error(f"An error occurred while uploading the file: {str(e)}")
+        st.error(f"Error: {str(e)}")
         return None    
 
 def upload_document(file):
@@ -80,7 +78,6 @@ def delete_document(file_id):
         'Content-Type': 'application/json'
     }
     data = {"file_id": file_id}
-
     try:
         response = requests.post("http://localhost:8000/delete-doc", headers=headers, json=data)
         if response.status_code == 200:
@@ -91,3 +88,31 @@ def delete_document(file_id):
     except Exception as e:
         st.error(f"An error occurred while deleting the document: {str(e)}")
         return None
+
+def get_chat_sessions():
+    try:
+        response = requests.get("http://localhost:8000/chat-sessions")
+        if response.status_code == 200:
+            return response.json()
+        else:
+            st.error(f"Failed to fetch chat sessions. Error: {response.status_code} - {response.text}")
+            return []
+    except Exception as e:
+        st.error(f"An error occurred while fetching chat sessions: {str(e)}")
+        return []
+
+# Новая функция для получения истории чата
+def get_chat_history(session_id):
+    try:
+        head = {
+            'session_id': session_id
+        }
+        response = requests.get(f"http://localhost:8000/chat-history", head)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            st.error(f"Failed to fetch chat history. Error: {response.status_code} - {response.text}")
+            return []
+    except Exception as e:
+        st.error(f"An error occurred while fetching chat history: {str(e)}")
+        return []

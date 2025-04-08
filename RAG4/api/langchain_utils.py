@@ -8,7 +8,7 @@ from langchain.callbacks import StdOutCallbackHandler  # Для отладки
 # Инициализация ретривера с настройками
 retriever = vectorstore.as_retriever(
     search_kwargs={
-        "k": 3,  # Количество возвращаемых документов
+        "k": 2,  # Количество возвращаемых документов
     }
 )
 
@@ -19,6 +19,7 @@ contextualize_q_system_prompt = (
     "formulate a standalone question which can be understood "
     "without the chat history. Do NOT answer the question, "
     "just reformulate it if needed and otherwise return it as is."
+    "if u have links u should add them after the answer"
 )
 
 contextualize_q_prompt = ChatPromptTemplate.from_messages([

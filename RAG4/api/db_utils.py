@@ -71,5 +71,19 @@ def get_all_documents():
     conn.close()
     return [dict(doc) for doc in documents]
 
+def get_all_chat_sessions():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT session_id, MIN(created_at) as last_message_time, user_query
+        FROM application_logs
+        GROUP BY session_id
+        ORDER BY last_message_time DESC
+    ''')
+    sessions = [{"session_id": row["session_id"], "title": f"Чат от {row['last_message_time']} ({row['user_query'][:30]}...)"}
+                for row in cursor.fetchall()]
+    conn.close()
+    return sessions
+
 create_application_logs()
 create_document_store()
