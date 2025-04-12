@@ -2,8 +2,6 @@ import streamlit as st
 from sidebar import display_sidebar
 from chat_interface import display_chat_interface
 
-st.title("For&Com Chatbot")
-
 # Initialize session state variables
 if "messages" not in st.session_state:
     st.session_state.messages = []

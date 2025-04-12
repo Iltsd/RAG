@@ -136,10 +136,51 @@ def display_chat_interface():
             40% { content: '..'; }
             60%, 100% { content: '...'; }
         }
+                
+        .chat-bubble {
+            padding: 12px 16px;
+            margin: 10px 0;
+            border-radius: 18px;
+            max-width: 90%;
+            word-wrap: break-word;
+            line-height: 1.5;
+        }
+        .user-message {
+            background: linear-gradient(to right, #3165b3, #3165b3);
+            align-self: flex-end;
+            border: 1px solid #3a7bd5;
+            box-shadow: 0 0 16px rgba(0, 204, 255, 0.3);
+        }
+        .assistant-message {
+            background: linear-gradient(to right, #3165b3, #3165b3);
+            border: 1px solid #3a7bd5;
+            box-shadow: 0 0 16px rgba(100, 116, 139, 0.2);
+        }
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-header {
+            text-align: center;
+            font-size: 4em;
+            font-weight: bold;
+            color: #3a7bd5;
+            text-shadow: 0 0 12px rgba(0, 210, 255, 0.4);
+            margin-bottom: 42px;
+        }
+        .stTextInput > div > input {
+            background-color: #3a7bd5;
+            border: 1px solid #38bdf8;
+            border-radius: 16px;
+            padding: 14px;
+            box-shadow: 0 0 4px rgba(56, 189, 248, 0.3);
+        }
     </style>
     """, unsafe_allow_html=True)
 
-    # Загрузка истории чата только при первом выборе сессии
+    st.markdown("<div class='chat-header'>For&Com Chatbot</div>", unsafe_allow_html=True)
+
+    # Загрузка истории
     if "show_chat_history" in st.session_state and st.session_state.show_chat_history:
         session_id = st.session_state.session_id
         if session_id and "chat_history_loaded" not in st.session_state:
@@ -147,18 +188,23 @@ def display_chat_interface():
                 st.session_state.messages = load_chat_history(session_id)
                 st.session_state.chat_history_loaded = True
 
-    # Display chat messages
+    # Вывод сообщений
     for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+        role_class = "user-message" if message["role"] == "U" else "assistant-message"
+        st.markdown(
+            f"<div class='chat-container'><div class='chat-bubble {role_class}'>{message['content']}</div></div>",
+            unsafe_allow_html=True
+        )
 
-    # Chat input
-    if prompt := st.chat_input("Type your question..."):
+    # Ввод нового сообщения
+    if prompt := st.chat_input("Введите ваш вопрос..."):
         st.session_state.messages.append({"role": "U", "content": prompt})
-        with st.chat_message("U"):
-            st.markdown(prompt)
+        st.markdown(
+            f"<div class='chat-container'><div class='chat-bubble user-message'>{prompt}</div></div>",
+            unsafe_allow_html=True
+        )
 
-        # High-contrast loading animation
+        # Загрузка ответа
         with st.empty():
             st.markdown("""
             <div class="loading-container">
@@ -166,7 +212,7 @@ def display_chat_interface():
                 <div class="loading-text">Processing request<span class="pulse-dots"></span></div>
             </div>
             """, unsafe_allow_html=True)
-            
+
             time.sleep(0.3)
             response = get_api_response(prompt, st.session_state.session_id, st.session_state.model)
             st.empty()
@@ -174,18 +220,28 @@ def display_chat_interface():
             if response:
                 st.session_state.session_id = response.get('session_id')
                 st.session_state.messages.append({"role": "assistant", "content": response['answer']})
-                with st.chat_message("assistant"):
-                    st.markdown(response['answer'])
-                    with st.expander("Response Details"):
-                        st.markdown("Generated Answer")
-                        st.markdown(response['answer'])
-                        st.markdown("Model Used")
-                        st.markdown(response['model'])
-                        st.markdown("Session ID")
-                        st.markdown(response['session_id'])
-            else:
-                st.error("Failed to get a response from the API. Please try again.")
+                st.markdown(
+                    f"<div class='chat-container'><div class='chat-bubble assistant-message'>{response['answer']}</div></div>",
+                    unsafe_allow_html=True
+                )
+                st.markdown(
+                    f"""
+                        <div class='chat-container'>
+                           <div class='chat-bubble assistant-message'>
+                                {response['answer']}
+                            <div style="margin-top: 12px; font-size: 0.85em; color: #3a7bd5;">
+                        <b>Модель:</b> {response['model']}<br>
+                        <b>Session ID:</b> <code>{response['session_id']}</code>
+                        </div>
+                        </div>
+                        </div>
+                        """,
+                   unsafe_allow_html=True
+                )
 
-    # Сброс флага загрузки истории при смене чата
+            else:
+                st.error("❌ Не удалось получить ответ от API. Попробуйте снова.")
+
+    # Сброс при смене чата
     if "chat_history_loaded" in st.session_state and st.session_state.show_chat_history:
         del st.session_state.chat_history_loaded
