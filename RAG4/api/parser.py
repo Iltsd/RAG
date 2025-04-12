@@ -107,3 +107,59 @@ def search_reddit(query: str):
     '''
     print(f"Итоговый список текстов: {combined_text}")  # Отладка
     return combined_text
+
+def search_habr(query: str):
+    url = f"https://www.habr.com/search/?q={query}"
+    
+    soup = BeautifulSoup(url, 'lxml')
+
+    # Ищем посты по data-testid (как в вашем первом примере)
+    posts = soup.find_all('div', class_="")
+    combined_text = []
+
+    print(f"Найдено элементов в API: {len(posts)}")  # Отладка
+
+    print(f"Итоговый список текстов: {combined_text}")  # Отладка
+    return combined_text
+
+def search_mailru(query: str):
+    url = f"https://www.habr.com/search/?q={query}"
+    
+    soup = BeautifulSoup(url, 'lxml')
+
+    # Ищем посты по data-testid (как в вашем первом примере)
+    posts = soup.find_all('div', class_="")
+    combined_text = []
+
+    print(f"Найдено элементов в API: {len(posts)}")  # Отладка
+    
+    print(f"Итоговый список текстов: {combined_text}")  # Отладка
+    return combined_text
+
+def search_geekforgeeks(query: str):
+    url = f"https://www.habr.com/search/?q={query}"
+    
+    soup = BeautifulSoup(url, 'lxml')
+
+    # Ищем посты по data-testid (как в вашем первом примере)
+    posts = soup.find_all('div', class_="")
+    combined_text = []
+
+    print(f"Найдено элементов в API: {len(posts)}")  # Отладка
+    
+    print(f"Итоговый список текстов: {combined_text}")  # Отладка
+    return combined_text
+
+def search_habr(query: str):
+    url = f"https://www.habr.com/search/?q={query}"
+    
+    soup = BeautifulSoup(url, 'lxml')
+
+    # Ищем посты по data-testid (как в вашем первом примере)
+    posts = soup.find_all('div', class_="")
+    combined_text = []
+
+    print(f"Найдено элементов в API: {len(posts)}")  # Отладка
+    
+    print(f"Итоговый список текстов: {combined_text}")  # Отладка
+    return combined_text

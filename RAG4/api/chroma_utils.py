@@ -4,7 +4,7 @@ from langchain_community.embeddings.sentence_transformer import SentenceTransfor
 from langchain_chroma import Chroma
 from typing import List
 from langchain_core.documents import Document
-from parser import search_stackoverflow, search_reddit
+from parser import search_stackoverflow, search_reddit, search_habr, search_mailru, search_geekforgeeks
 
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200, length_function=len)
 
@@ -61,6 +61,15 @@ def search_forum(query, selected_sites):
         if site == "Reddit":
             texts = search_reddit(query)
             sucsess = process_and_store_texts('Reddit', texts)
+        if site == "Habr":
+            texts = search_habr(query)
+            sucsess = process_and_store_texts('Habr', texts)
+        if site == "Mail.ru":
+            texts = search_mailru(query)
+            sucsess = process_and_store_texts('Mail.ru', texts)
+        if site == "GeekForGeeks":
+            texts = search_geekforgeeks(query)
+            sucsess = process_and_store_texts('GeekForGeeks', texts)
     return sucsess
             
     

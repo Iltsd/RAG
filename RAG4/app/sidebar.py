@@ -12,7 +12,7 @@ def display_sidebar():
         st.markdown("---")
 
         st.markdown("<h3 style='color: #AFDBF5;'>Выбор модели</h3>", unsafe_allow_html=True)
-        model_options = ["llama3.2", "llama3.1", "gpt-4o", "gpt-4o-mini"]
+        model_options = ["llama3.2", "llama3.1"]
         selected_model = st.selectbox(
             "Выберите модель ИИ",
             options=model_options,

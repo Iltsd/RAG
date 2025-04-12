@@ -187,5 +187,5 @@ def display_chat_interface():
                 st.error("Failed to get a response from the API. Please try again.")
 
     # Сброс флага загрузки истории при смене чата
-    if "chat_history_loaded" in st.session_state and not st.session_state.show_chat_history:
+    if "chat_history_loaded" in st.session_state and st.session_state.show_chat_history:
         del st.session_state.chat_history_loaded

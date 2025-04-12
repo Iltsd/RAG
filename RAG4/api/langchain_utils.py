@@ -30,8 +30,8 @@ contextualize_q_prompt = ChatPromptTemplate.from_messages([
 
 # Промпт для генерации ответа с явным указанием использования контекста
 qa_prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are a helpful AI assistant. Use the following context to answer the user's question. "
-               "If the context is insufficient, say so and provide a general answer based on your knowledge."),
+    ("system", "You are a smart AI assistent. Use the following context to answer the user's question. "
+               "If the context is insufficient, do whatever u want, but don't use it."),
     ("system", "Context: {context}"),
     MessagesPlaceholder(variable_name="chat_history"),
     ("human", "{input}")
@@ -65,36 +65,3 @@ def get_rag_chain(model="gpt-4o-mini", verbose=False):
     )
     
     return rag_chain
-'''
-# Пример использования с отладкой
-def test_rag_chain(query, chat_history=None):
-    """
-    Тестирует RAG-цепочку с заданным запросом и историей чата.
-    
-    Args:
-        query (str): Вопрос пользователя.
-        chat_history (list): Список сообщений истории чата (опционально).
-    """
-    if chat_history is None:
-        chat_history = []
-    
-    rag_chain = get_rag_chain(model="llama3.2", verbose=True)  # Включаем отладку
-    result = rag_chain.invoke({
-        "input": query,
-        "chat_history": chat_history
-    })
-    
-    print("Ответ:", result["answer"])
-    print("Использованный контекст:")
-    for i, doc in enumerate(result.get("context", [])):
-        print(f"Документ {i+1}: {doc.page_content[:200]}...")
-
-if __name__ == "__main__":
-    # Тестовый запрос
-    query = "HTTPS issues"
-    chat_history = [
-        {"role": "human", "content": "I’m learning Python."},
-        {"role": "assistant", "content": "Great! Python is versatile."}
-    ]
-    test_rag_chain(query, chat_history)'
-    '''
