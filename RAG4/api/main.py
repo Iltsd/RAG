@@ -85,7 +85,6 @@ def delete_document(request: DeleteFileRequest):
     else:
         return {"error": f"Failed to delete document with file_id {request.file_id} from Chroma."}
 
-# Новый эндпоинт для получения всех сессий чатов
 @app.get("/chat-sessions")
 def get_chat_sessions():
     return get_all_chat_sessions()  

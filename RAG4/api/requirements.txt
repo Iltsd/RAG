@@ -13,3 +13,4 @@ beautifulsoup4
 streamlit
 lxml
 selenium
+quote

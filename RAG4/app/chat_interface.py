@@ -180,7 +180,6 @@ def display_chat_interface():
 
     st.markdown("<div class='chat-header'>For&Com Chatbot</div>", unsafe_allow_html=True)
 
-    # Загрузка истории
     if "show_chat_history" in st.session_state and st.session_state.show_chat_history:
         session_id = st.session_state.session_id
         if session_id and "chat_history_loaded" not in st.session_state:
@@ -188,7 +187,6 @@ def display_chat_interface():
                 st.session_state.messages = load_chat_history(session_id)
                 st.session_state.chat_history_loaded = True
 
-    # Вывод сообщений
     for message in st.session_state.messages:
         role_class = "user-message" if message["role"] == "U" else "assistant-message"
         st.markdown(
@@ -196,7 +194,6 @@ def display_chat_interface():
             unsafe_allow_html=True
         )
 
-    # Ввод нового сообщения
     if prompt := st.chat_input("Введите ваш вопрос..."):
         st.session_state.messages.append({"role": "U", "content": prompt})
         st.markdown(
@@ -204,7 +201,6 @@ def display_chat_interface():
             unsafe_allow_html=True
         )
 
-        # Загрузка ответа
         with st.empty():
             st.markdown("""
             <div class="loading-container">
@@ -227,11 +223,9 @@ def display_chat_interface():
                 st.markdown(
                     f"""
                         <div class='chat-container'>
-                           <div class='chat-bubble assistant-message'>
+                            <div class='chat-bubble assistant-message'>
                                 {response['answer']}
                             <div style="margin-top: 12px; font-size: 0.85em; color: #3a7bd5;">
-                        <b>Модель:</b> {response['model']}<br>
-                        <b>Session ID:</b> <code>{response['session_id']}</code>
                         </div>
                         </div>
                         </div>
@@ -240,8 +234,7 @@ def display_chat_interface():
                 )
 
             else:
-                st.error("❌ Не удалось получить ответ от API. Попробуйте снова.")
+                st.error("Не удалось получить ответ от API. Попробуйте снова.")
 
-    # Сброс при смене чата
     if "chat_history_loaded" in st.session_state and st.session_state.show_chat_history:
         del st.session_state.chat_history_loaded

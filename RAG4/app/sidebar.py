@@ -4,14 +4,15 @@ from api_utils import upload_document, list_documents, delete_document, get_chat
 def display_sidebar():
     with st.sidebar:
         st.markdown("""
-            <h0 style='color: #3a7bd5; text-align: center;'>
-                Панель управления
-            </h0>
-            """, unsafe_allow_html=True)
+                    <div style='color: #3a7bd5; text-align: center; font-size: 30px; font-weight: bold;'>
+                    Панель управления
+                    </div>
+        """, unsafe_allow_html=True)
+
 
         st.markdown("---")
 
-        st.markdown("<h2 style='color: #3a7bd5;'>Выбор модели</h2>", unsafe_allow_html=True)
+        st.markdown("<h1 style='color: #3a7bd5;'>Выбор модели</h1>", unsafe_allow_html=True)
         model_options = ["llama3.2", "llama3.1"]
         selected_model = st.selectbox(
             "Выберите модель ИИ",
@@ -21,25 +22,24 @@ def display_sidebar():
             key="model"
         )
 
-        st.markdown("<h2 style='color: #3a7bd5;'>Источники данных</h2>", unsafe_allow_html=True)
+        st.markdown("<h1 style='color: #3a7bd5;'>Источники данных</h1>", unsafe_allow_html=True)
         forums_options = ["Stackoverflow", "Reddit", "Habr", "Mail.ru", "GeekForGeeks",]
         selected_sites = st.multiselect(
             "Выберите платформы",
             options=forums_options,
             default="Stackoverflow",
             help="Выбор платформ для поиска",
-            max_selections=2,
+            max_selections=5,
             key="selected_sites"  
         )
 
         st.markdown("---")
-        st.markdown("<h2 style='color: #3a7bd5;'>Текущие настройки:</h2>", unsafe_allow_html=True)
+        st.markdown("<h1 style='color: #3a7bd5;'>Текущие настройки:</h1>", unsafe_allow_html=True)
         st.write(f"Модель: `{selected_model}`")
         st.write(f"Платформы: {', '.join(selected_sites) if selected_sites else 'Не выбраны'}")
 
-# История чатов
         st.markdown("---")
-        st.markdown("<h2 style='color: #3a7bd5;'>История чатов</h2>", unsafe_allow_html=True)
+        st.markdown("<h1 style='color: #3a7bd5;'>История чатов</h1>", unsafe_allow_html=True)
         
         if "show_chat_selector" not in st.session_state:
             st.session_state.show_chat_selector = False
@@ -80,7 +80,7 @@ def display_sidebar():
                     print(f"Установлен session_id: {st.session_state.session_id}")
 
         st.markdown("---")
-        st.markdown("<h2 style='color: #3a7bd5;'>Загрузка документов</h2>", unsafe_allow_html=True)
+        st.markdown("<h1 style='color: #3a7bd5;'>Загрузка документов</h1>", unsafe_allow_html=True)
         uploaded_file = st.file_uploader("Выберите файл для загрузки", type=["pdf", "docx", "html"])
 
         if uploaded_file is not None:
@@ -93,7 +93,7 @@ def display_sidebar():
                     else:
                         st.error("Ошибка при загрузке файла.")
 
-        st.markdown("<h2 style='color: #3a7bd5;'>Загруженные документы</h2>", unsafe_allow_html=True)
+        st.markdown("<h1 style='color: #3a7bd5;'>Загруженные документы</h1>", unsafe_allow_html=True)
 
         if st.button("Обновить список документов"):
             with st.spinner("Обновление..."):
