@@ -1,12 +1,13 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from pydantic_models import QueryInput, QueryResponse, DocumentInfo, DeleteFileRequest
 from langchain_utils import get_rag_chain
-from db_utils import insert_application_logs, get_chat_history, get_all_documents, insert_document_record, delete_document_record
+from db_utils import insert_application_logs, get_chat_history, get_all_documents, insert_document_record, delete_document_record, get_all_chat_sessions  # Новый импорт
 from chroma_utils import index_document_to_chroma, delete_doc_from_chroma
 import os
 import uuid
 import logging
 import shutil
+from chroma_utils import search_forum
 
 logging.basicConfig(filename='app.log', level=logging.INFO)
 
@@ -15,19 +16,31 @@ app = FastAPI()
 @app.post("/chat", response_model=QueryResponse)
 def chat(query_input: QueryInput):
     session_id = query_input.session_id or str(uuid.uuid4())
-    logging.info(f"Session ID: {session_id}, User Query: {query_input.question}, , Model: {query_input.model.value}")
+    logging.info(f"Session ID: {session_id}, User Query: {query_input.question}, Model: {query_input.model.value}")
     
     chat_history = get_chat_history(session_id)
     rag_chain = get_rag_chain(query_input.model.value)
-    answer = rag_chain.invoke({
+    result = rag_chain.invoke({
         "input": query_input.question,
         "chat_history": chat_history
-    })['answer']
+    })
+    answer = result["answer"]
+    for i, doc in enumerate(result.get("context", [])):
+        print(f"Документ {i+1}: {doc.page_content[:200]}...")
 
     insert_application_logs(session_id, query_input.question, answer, query_input.model.value)
     logging.info(f"Session ID: {session_id}, AI Response: {answer}")
     return QueryResponse(answer=answer, session_id=session_id, model=query_input.model)
 
+@app.post("/forums-search")
+def upload_parsed_document(query_input: QueryInput):
+    question = query_input.question
+    selected_sites = query_input.selected_sites
+    print(question, selected_sites)
+    success = search_forum(question, selected_sites)
+
+    if not success:
+        raise HTTPException(status_code=500, detail=f"Failed to index {question}.")
 
 @app.post("/upload-doc")
 def upload_and_index_document(file: UploadFile = File(...)):
@@ -71,3 +84,13 @@ def delete_document(request: DeleteFileRequest):
             return {"error": f"Deleted from Chroma but failed to delete document with file_id {request.file_id} from the database."}
     else:
         return {"error": f"Failed to delete document with file_id {request.file_id} from Chroma."}
+
+@app.get("/chat-sessions")
+def get_chat_sessions():
+    return get_all_chat_sessions()  
+
+@app.get("/chat-history")
+def get_selected_chat_history(session_id: str):
+    chat_history = get_chat_history(session_id=session_id)
+    return chat_history
+    

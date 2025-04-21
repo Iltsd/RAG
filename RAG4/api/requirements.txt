@@ -8,6 +8,9 @@ python-multipart
 sentence-transformers
 fastapi
 uvicorn
-request
+requests
 beautifulsoup4
 streamlit
+lxml
+selenium
+quote

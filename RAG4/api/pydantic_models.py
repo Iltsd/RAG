@@ -6,11 +6,13 @@ class ModelName(str, Enum):
     GPT4_O = "gpt-4o"
     GPT4_O_MINI = "gpt-4o-mini"
     LLAMA3_2 = "llama3.2"
+    LLAMA3_1 = "llama3.1"
 
 class QueryInput(BaseModel):
     question: str
     session_id: str = Field(default=None)
     model: ModelName = Field(default=ModelName.LLAMA3_2)
+    selected_sites: list = Field(default=None)
 
 class QueryResponse(BaseModel):
     answer: str

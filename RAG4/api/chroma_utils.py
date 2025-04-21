@@ -4,6 +4,7 @@ from langchain_community.embeddings.sentence_transformer import SentenceTransfor
 from langchain_chroma import Chroma
 from typing import List
 from langchain_core.documents import Document
+from parser import search_stackoverflow, search_reddit, search_habr, search_mailru, search_geekforgeeks
 
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200, length_function=len)
 
@@ -48,4 +49,51 @@ def delete_doc_from_chroma(file_id: int):
         return True
     except Exception as e:
         print(f"Error deleting document with file_id {file_id} from Chroma: {str(e)}")
+        return False
+    
+
+def search_forum(query, selected_sites):
+    sucsess = False
+    for site in selected_sites:
+        if site == "Stackoverflow":
+            texts = search_stackoverflow(query)
+            sucsess = process_and_store_texts('Stackoverflow', texts)
+        if site == "Reddit":
+            texts = search_reddit(query)
+            sucsess = process_and_store_texts('Reddit', texts)
+        if site == "Habr":
+            texts = search_habr(query)
+            sucsess = process_and_store_texts('Habr', texts)
+        if site == "Mail.ru":
+            texts = search_mailru(query)
+            sucsess = process_and_store_texts('Mail.ru', texts)
+        if site == "GeekForGeeks":
+            texts = search_geekforgeeks(query)
+            sucsess = process_and_store_texts('GeekForGeeks', texts)
+    return sucsess
+            
+    
+def process_and_store_texts(site, texts):
+    try: 
+        if not texts:
+            print("Нет данных для обработки")
+            return False
+        
+        documents = []
+        for text in texts:
+            if not isinstance(text, str):
+                print(f"Пропущен некорректный элемент: {text}, тип: {type(text)}")
+                continue
+            chunks = text_splitter.split_text(text)
+            for i, chunk in enumerate(chunks):
+                documents.append(Document(page_content=chunk, metadata={"source": f"{site}"}))
+        
+        if documents:
+            vectorstore.add_documents(documents)
+            return True
+        else:
+            print("Нет чанков для добавления")
+            return False
+    except Exception as e:
+        print(f"Error indexing document: {e}")
         return False
