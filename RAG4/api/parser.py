@@ -57,17 +57,21 @@ def search_habr(query: str):
     options.add_argument('--no-sandbox')
     driver = webdriver.Chrome(options=options)
 
-    search_url = f"https://habr.com/ru/search/?q={query}&target_type=posts"
+    search_url = f"https://habr.com/ru/search/?q={query}&target_type=posts&sort=relevance"
     driver.get(search_url)
     time.sleep(3)  # Подождите, пока страница полностью загрузится
 
     soup = BeautifulSoup(driver.page_source, 'lxml')
-    posts = soup.find_all("li", class_="tm-articles-list__item")
+    posts = soup.find_all("div", class_="tm-article-snippet tm-article-snippet")
 
     articles = []
     print(f"Найдено постов: {len(posts)}")
 
+    post_counter=0
     for post in posts:
+        post_counter+=1
+        if post_counter > 5:
+            break
         try:
             link_tag = post.find("a", class_="tm-title__link")
             if not link_tag:
@@ -150,49 +154,85 @@ def search_reddit(query: str):
     return combined_text
 
 def search_mailru(query: str):
-    url = f"https://www.habr.com/search/?q={query}"
+    url = f"https://otvet.mail.ru/search/{query}"
+
+    options = Options()
+    options.add_argument('--headless')
+    options.add_argument('--disable-gpu')
+    options.add_argument('--no-sandbox')
+    driver = webdriver.Chrome(options=options)
     
-    soup = BeautifulSoup(url, 'lxml')
+    driver.get(url)
+    time.sleep(3)  # Подождите, пока страница полностью загрузится
 
+    soup = BeautifulSoup(driver.page_source, 'lxml')
     # Ищем посты по data-testid (как в вашем первом примере)
-    posts = soup.find_all('div', class_="")
+    posts = soup.find_all('div', class_="mMhMm")
+    
     combined_text = []
-
+    
     print(f"Найдено элементов в API: {len(posts)}")  # Отладка
+    for post in posts:
+        try:
+            post=post.find('a', class_="KFtEM aR6dQ Ub4yk")
+            post_url = f"https://otvet.mail.ru{post['href']}"
+            post_title = post.get_text()
+            print(post_title)
+            driver.get(post_url)
+
+            soup = BeautifulSoup(driver.page_source, 'lxml')
+            question = soup.find('div', class_="aitWd PcSgH")
+            print("\nQuestion", question)
+            right_answer = soup.find('div', class_="aitWd _Jzbh")
+            print("\nRight_answer", right_answer)
+            if right_answer:
+                combined_text.append(f"Title: {post_title}\nLink: {post_url}\nQuestion: {question.get_text()}\nAnswer: {right_answer.get_text()}")
+                print(f"Добавлен текст для {url}")  # Отладка
+            else:
+                print(f"Не найден блок ответа для {url}")
+        except Exception as e:
+            print(f"Ошибка при обработке поста: {e}")
+    
     
     print(f"Итоговый список текстов: {combined_text}")  # Отладка
     return combined_text
 
 def search_geekforgeeks(query: str):
-    # URL для поиска на GeekForGeeks
-    base_url = "https://www.geeksforgeeks.org"
-    search_url = f"{base_url}/search/?q={query}"
+    search_url = f"https://www.geeksforgeeks.org/search/?q={query}"
 
-    # Отправка GET-запроса
-    response = requests.get(search_url)
+    options = Options()
+    options.add_argument('--headless')
+    options.add_argument('--disable-gpu')
+    options.add_argument('--no-sandbox')
+    driver = webdriver.Chrome(options=options)
 
-    if response.status_code != 200:
-        raise Exception(f"Ошибка запроса: {response.status_code}")
+    driver.get(search_url)
+    time.sleep(3)  # Подождите, пока страница полностью загрузится
 
-    soup = BeautifulSoup(response.text, 'lxml')
-
+    soup = BeautifulSoup(driver.page_source, 'lxml')
     # Найдем все результаты поиска (передбразуем их в ссылки на статьи)
-    search_results = soup.find_all('div', class_='gsc-webResult')
+    search_results = soup.find_all('div', class_="gcse-title")
 
+
+    print(f"Найдено элементов в API: {len(search_results)}")  # Отладка
     combined_text = []
 
     for item in search_results:
         try:
-            title = item.find('a', class_='gs-title')
+            title = item.find('div', class_="article-title")
             link = title['href']
             title_text = title.get_text(strip=True)
-            
-            # Получим описание или вводный текст (если есть)
-            description = item.find('div', class_='gs-snippet')
-            description_text = description.get_text(strip=True) if description else 'Описание не найдено'
 
-            combined_text.append(f"Title: {title_text}\nLink: {link}\nDescription: {description_text}")
-            print(f"Добавлен текст для {link}")  # Отладка
+            response = requests.get(link)
+
+            soup = BeautifulSoup(response, 'lxml')
+            discription = soup.find('div', class_="article--viewer_content")
+            print("\nDiscription", discription)
+            if discription:
+                combined_text.append(f"Title: {title_text}\nLink: {link}\nDiscription: {discription}")
+                print(f"Добавлен текст для {link}")  # Отладка
+            else:
+                print(f"Не найден блок ответа для {link}")
         except Exception as e:
             print(f"Ошибка при обработке элемента: {e}")
 

@@ -27,9 +27,9 @@ def display_sidebar():
         selected_sites = st.multiselect(
             "Выберите платформы",
             options=forums_options,
-            default="Stackoverflow",
+            default=None,
             help="Выбор платформ для поиска",
-            max_selections=5,
+            max_selections=2,
             key="selected_sites"  
         )
 
