@@ -1,96 +1,49 @@
+# api/main.py
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from pydantic_models import QueryInput, QueryResponse, DocumentInfo, DeleteFileRequest
-from langchain_utils import get_rag_chain
-from db_utils import insert_application_logs, get_chat_history, get_all_documents, insert_document_record, delete_document_record, get_all_chat_sessions  # Новый импорт
-from chroma_utils import index_document_to_chroma, delete_doc_from_chroma
-import os
-import uuid
+from agents.coordinator import coordinator
 import logging
-import shutil
-from chroma_utils import search_forum
 
 logging.basicConfig(filename='app.log', level=logging.INFO)
-
 app = FastAPI()
 
 @app.post("/chat", response_model=QueryResponse)
-def chat(query_input: QueryInput):
-    session_id = query_input.session_id or str(uuid.uuid4())
-    logging.info(f"Session ID: {session_id}, User Query: {query_input.question}, Model: {query_input.model.value}")
-    
-    chat_history = get_chat_history(session_id)
-    rag_chain = get_rag_chain(query_input.model.value)
-    result = rag_chain.invoke({
-        "input": query_input.question,
-        "chat_history": chat_history
-    })
-    answer = result["answer"]
-    for i, doc in enumerate(result.get("context", [])):
-        print(f"Документ {i+1}: {doc.page_content[:200]}...")
-
-    insert_application_logs(session_id, query_input.question, answer, query_input.model.value)
-    logging.info(f"Session ID: {session_id}, AI Response: {answer}")
-    return QueryResponse(answer=answer, session_id=session_id, model=query_input.model)
+async def chat(query_input: QueryInput):
+    return coordinator.process_chat(query_input)
 
 @app.post("/forums-search")
-def upload_parsed_document(query_input: QueryInput):
-    question = query_input.question
-    selected_sites = query_input.selected_sites
-    print(question, selected_sites)
-    success = search_forum(question, selected_sites)
-
+async def upload_parsed_document(query_input: QueryInput):
+    success = coordinator.forum_agent.process({
+        "question": query_input.question,
+        "selected_sites": query_input.selected_sites
+    })
+    
     if not success:
-        raise HTTPException(status_code=500, detail=f"Failed to index {question}.")
+        raise HTTPException(status_code=500, detail="Failed to search forums.")
+    
+    return {"message": "Forum search completed successfully"}
 
 @app.post("/upload-doc")
-def upload_and_index_document(file: UploadFile = File(...)):
-    allowed_extensions = ['.pdf', '.docx', '.html']
-    file_extension = os.path.splitext(file.filename)[1].lower()
-
-    if file_extension not in allowed_extensions:
-        raise HTTPException(status_code=400, detail=f"Unsupported file type. Allowed types are: {', '.join(allowed_extensions)}")
-
-    temp_file_path = f"temp_{file.filename}"
-
-    try:
-        with open(temp_file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-
-        file_id = insert_document_record(file.filename)
-        success = index_document_to_chroma(temp_file_path, file_id)
-
-        if success:
-            return {"message": f"File {file.filename} has been successfully uploaded and indexed.", "file_id": file_id}
-        else:
-            delete_document_record(file_id)
-            raise HTTPException(status_code=500, detail=f"Failed to index {file.filename}.")
-    finally:
-        if os.path.exists(temp_file_path):
-            os.remove(temp_file_path)
+async def upload_and_index_document(file: UploadFile = File(...)):
+    return coordinator.upload_document(file)
 
 @app.get("/list-docs", response_model=list[DocumentInfo])
-def list_documents():
-    return get_all_documents()
+async def list_documents():
+    return coordinator.list_documents()
 
 @app.post("/delete-doc")
-def delete_document(request: DeleteFileRequest):
-    chroma_delete_success = delete_doc_from_chroma(request.file_id)
-
-    if chroma_delete_success:
-        db_delete_success = delete_document_record(request.file_id)
-        if db_delete_success:
-            return {"message": f"Successfully deleted document with file_id {request.file_id} from the system."}
-        else:
-            return {"error": f"Deleted from Chroma but failed to delete document with file_id {request.file_id} from the database."}
-    else:
-        return {"error": f"Failed to delete document with file_id {request.file_id} from Chroma."}
+async def delete_document(request: DeleteFileRequest):
+    return coordinator.delete_document(request.file_id)
 
 @app.get("/chat-sessions")
-def get_chat_sessions():
-    return get_all_chat_sessions()  
+async def get_chat_sessions():
+    return coordinator.get_chat_sessions()
 
 @app.get("/chat-history")
-def get_selected_chat_history(session_id: str):
-    chat_history = get_chat_history(session_id=session_id)
-    return chat_history
-    
+async def get_selected_chat_history(session_id: str):
+    return coordinator.get_chat_history(session_id)
+
+@app.get("/")
+async def root():
+    return {"message": "RAG API Server is running"}
+""" sudo fuser -k 8000/tcp """

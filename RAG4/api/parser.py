@@ -207,14 +207,13 @@ def search_geekforgeeks(query: str):
     driver = webdriver.Chrome(options=options)
 
     driver.get(search_url)
-    time.sleep(3)  # Подождите, пока страница полностью загрузится
+    time.sleep(3)  
 
     soup = BeautifulSoup(driver.page_source, 'lxml')
-    # Найдем все результаты поиска (передбразуем их в ссылки на статьи)
+    
     search_results = soup.find_all('div', class_="gcse-title")
 
-
-    print(f"Найдено элементов в API: {len(search_results)}")  # Отладка
+    print(f"Найдено элементов в API: {len(search_results)}")
     combined_text = []
 
     for item in search_results:
