@@ -25,7 +25,10 @@ def get_api_response(question, session_id, model):
 
         response = requests.post("http://localhost:8000/chat", headers=headers, json=data)
         if response.status_code == 200:
-            return response.json()
+            result = response.json()
+            if result.get('audio_file'):
+                print(f"Audio file received: {result['audio_file']}")
+            return result
         else:
             st.error(f"API request failed with status code {response.status_code}: {response.text}")
             return None

@@ -18,6 +18,7 @@ class QueryResponse(BaseModel):
     answer: str
     session_id: str
     model: ModelName
+    audio_file: str = Field(default=None)  # Новый параметр для пути к аудиофайлу
 
 class DocumentInfo(BaseModel):
     id: int

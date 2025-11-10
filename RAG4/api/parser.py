@@ -6,39 +6,55 @@ from selenium.webdriver.chrome.options import Options
 
 def search_stackoverflow(query: str):
     url = "https://api.stackexchange.com/2.3/search/advanced"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+    }
     params = {
         "order": "desc",
         "sort": "relevance",
         "q": query,
         "site": "stackoverflow",
-        "pagesize": 5,
+        "pagesize": 3,
     }
-    response = requests.get(url, params=params)
     
+    response = requests.get(url, params=params, headers=headers, timeout=10)
     if response.status_code != 200:
-        raise Exception(f"Ошибка запроса: {response.status_code}")
+        print(f"Ошибка запроса к API: {response.status_code}")
+        return []
     
     data = response.json()
     combined_text = []
     
-    print(f"Найдено элементов в API: {len(data['items'])}")  # Отладка
-    for item in data["items"][:len(data['items'])]:
+    options = webdriver.ChromeOptions()
+    options.add_argument("--headless")
+    options.add_argument(f"user-agent={headers['User-Agent']}")
+    driver = webdriver.Chrome(options=options)
+    
+    print(f"Найдено элементов в API: {len(data.get('items', []))}")
+    for item in data.get("items", [])[:len(data.get('items', []))]:
         try:
-            url = item["link"]
-            response = requests.get(url)
-            if response.status_code != 200:
-                print(f"Не удалось загрузить страницу {url}")
+            url = item.get("link", "")
+            if not url:
+                print(f"Отсутствует ссылка для элемента: {item}")
                 continue
             
-            soup = BeautifulSoup(response.text, 'lxml')
-            question = soup.find('div', class_="s-prose js-post-body")
-            right_answer = soup.find('div', class_="answercell post-layout--right")
+            time.sleep(2)
+            
+            driver.get(url)
+            soup = BeautifulSoup(driver.page_source, 'lxml')
+            question = soup.find('div', class_='s-prose js-post-body')
+            right_answer = soup.find('div', class_='answercell post-layout--right')
             
             if right_answer:
-                text = right_answer.find('div', class_="s-prose js-post-body")
+                text = right_answer.find('div', class_='s-prose js-post-body')
                 if text and text.get_text(strip=True):
-                    combined_text.append(f"Title: {item['title']}\nLink: {item['link']}\nQuestion: {question.get_text()}\nAnswer: {text.get_text(strip=True)}")
-                    print(f"Добавлен текст для {url}")  # Отладка
+                    combined_text.append(
+                        f"Title: {item.get('title', 'Нет заголовка')}\n"
+                        f"Link: {item.get('link', 'Нет ссылки')}\n"
+                        f"Question: {question.get_text(strip=True) if question else 'Нет вопроса'}\n"
+                        f"Answer: {text.get_text(strip=True)}"
+                    )
+                    print(f"Добавлен текст для {url}")
                 else:
                     print(f"Не найден текст ответа для {url}")
             else:
@@ -46,7 +62,10 @@ def search_stackoverflow(query: str):
         except Exception as e:
             print(f"Ошибка при обработке {url}: {e}")
     
-    print(f"Итоговый список текстов: {combined_text}")  # Отладка
+    driver.quit()
+    print(f"Итоговый список текстов: {combined_text}")
+    if not combined_text:
+        print("Нет данных для обработки")
     return combined_text
 
 
@@ -59,7 +78,7 @@ def search_habr(query: str):
 
     search_url = f"https://habr.com/ru/search/?q={query}&target_type=posts&sort=relevance"
     driver.get(search_url)
-    time.sleep(3)  # Подождите, пока страница полностью загрузится
+    time.sleep(3)
 
     soup = BeautifulSoup(driver.page_source, 'lxml')
     posts = soup.find_all("div", class_="tm-article-snippet tm-article-snippet")
@@ -80,11 +99,10 @@ def search_habr(query: str):
             title = link_tag.text.strip()
             href = "https://habr.com" + link_tag["href"]
 
-            # Парсим количество лайков
+
             rating_tag = post.find("span", class_="tm-votes-meter__value")
             rating = int(rating_tag.text.strip()) if rating_tag else 0
 
-            # Переходим на страницу статьи
             driver.get(href)
             time.sleep(2)
             article_soup = BeautifulSoup(driver.page_source, "lxml")
@@ -136,7 +154,7 @@ def search_reddit(query: str):
     data = response.json()
     combined_text = []
     
-    print(f"Найдено элементов в API: {len(data['data']['children'])}")  # Отладка
+    print(f"Найдено элементов в API: {len(data['data']['children'])}")
     for item in data["data"]["children"]:
         try:
             post_data = item["data"]

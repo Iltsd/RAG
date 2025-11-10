@@ -8,6 +8,7 @@ import uuid
 import logging
 import shutil
 from chroma_utils import search_forum
+from textTS import synthesize_speech
 
 logging.basicConfig(filename='app.log', level=logging.INFO)
 
@@ -30,7 +31,25 @@ def chat(query_input: QueryInput):
 
     insert_application_logs(session_id, query_input.question, answer, query_input.model.value)
     logging.info(f"Session ID: {session_id}, AI Response: {answer}")
-    return QueryResponse(answer=answer, session_id=session_id, model=query_input.model)
+
+    audio_file_path = None
+    try:
+        print(f"Starting TTS for: {answer[:50]}...")  # Для отладки
+        audio_file_path = synthesize_speech(answer)
+        if audio_file_path:
+            print(f"TTS success: {audio_file_path}")
+        else:
+            print("TTS failed to generate file")
+    except Exception as tts_error:
+        print(f"TTS error: {tts_error}")
+        audio_file_path = None
+    
+    return QueryResponse(
+        answer=answer, 
+        session_id=session_id, 
+        model=query_input.model,
+        audio_file=audio_file_path  # Новый параметр
+    )
 
 @app.post("/forums-search")
 def upload_parsed_document(query_input: QueryInput):
@@ -93,4 +112,3 @@ def get_chat_sessions():
 def get_selected_chat_history(session_id: str):
     chat_history = get_chat_history(session_id=session_id)
     return chat_history
-    
