@@ -13,6 +13,7 @@ class QueryInput(BaseModel):
     session_id: str = Field(default=None)
     model: ModelName = Field(default=ModelName.LLAMA3_2)
     selected_sites: list = Field(default=None)
+    agent_type: str = Field(default="rag")  # <-- Новый параметр
 
 class QueryResponse(BaseModel):
     answer: str

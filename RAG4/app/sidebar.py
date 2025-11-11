@@ -22,6 +22,15 @@ def display_sidebar():
             key="model"
         )
 
+            # В display_sidebar(), после выбора модели
+        agent_options = ["rag", "summarizer"]
+        selected_agent = st.selectbox(
+        "Выберите тип агента",
+        options=agent_options,
+        index=0,
+        key="agent_type"
+)
+
         st.markdown("<h1 style='color: #3a7bd5;'>Источники данных</h1>", unsafe_allow_html=True)
         forums_options = ["Stackoverflow", "Reddit", "Habr", "Mail.ru", "GeekForGeeks",]
         selected_sites = st.multiselect(

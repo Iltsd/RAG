@@ -6,15 +6,19 @@ def get_api_response(question, session_id, model):
         'accept': 'application/json',
         'Content-Type': 'application/json'
     }
+
     data = {
         "question": question,
-        "model": model
+        "model": model,
+        "agent_type": st.session_state.get("agent_type", "rag")  # <-- Добавьте это
     }
+    # ... (остальное без изменений)
     if session_id:
         data["session_id"] = session_id
     selected_sites = st.session_state.get("selected_sites", [])
     if selected_sites:
         data["selected_sites"] = selected_sites
+    data["agent_type"] = st.session_state.get("agent_type", "rag")
     
     try:
         print(selected_sites)

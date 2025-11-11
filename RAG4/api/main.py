@@ -10,45 +10,40 @@ import shutil
 from chroma_utils import search_forum
 from textTS import synthesize_speech
 
+
 logging.basicConfig(filename='app.log', level=logging.INFO)
 
 app = FastAPI()
 
+
+
+from rag_app import SimpleRAGAgent, SummarizerAgent  # <-- Добавьте импорт
+
+# В эндпоинте /chat (замените логику генерации ответа)
 @app.post("/chat", response_model=QueryResponse)
 def chat(query_input: QueryInput):
     session_id = query_input.session_id or str(uuid.uuid4())
     logging.info(f"Session ID: {session_id}, User Query: {query_input.question}, Model: {query_input.model.value}")
     
-    chat_history = get_chat_history(session_id)
-    rag_chain = get_rag_chain(query_input.model.value)
-    result = rag_chain.invoke({
-        "input": query_input.question,
-        "chat_history": chat_history
-    })
+    # Выбор агента
+    agent_type = query_input.agent_type or "rag"
+    agents = {
+        "rag": SimpleRAGAgent(query_input.model.value),
+        "summarizer": SummarizerAgent(query_input.model.value)
+    }
+    
+    # Получаем ответ от агента
+    result = agents[agent_type].process_query(query_input.question, session_id)
     answer = result["answer"]
-    for i, doc in enumerate(result.get("context", [])):
-        print(f"Документ {i+1}: {doc.page_content[:200]}...")
-
-    insert_application_logs(session_id, query_input.question, answer, query_input.model.value)
-    logging.info(f"Session ID: {session_id}, AI Response: {answer}")
-
-    audio_file_path = None
-    try:
-        print(f"Starting TTS for: {answer[:50]}...")  # Для отладки
-        audio_file_path = synthesize_speech(answer)
-        if audio_file_path:
-            print(f"TTS success: {audio_file_path}")
-        else:
-            print("TTS failed to generate file")
-    except Exception as tts_error:
-        print(f"TTS error: {tts_error}")
-        audio_file_path = None
+    
+    # Генерация аудио (если нужно)
+    audio_file_path = synthesize_speech(answer)
     
     return QueryResponse(
-        answer=answer, 
-        session_id=session_id, 
+        answer=answer,
+        session_id=result["session_id"],
         model=query_input.model,
-        audio_file=audio_file_path  # Новый параметр
+        audio_file=audio_file_path
     )
 
 @app.post("/forums-search")
