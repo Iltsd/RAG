@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from typing import Optional, List
 from enum import Enum
 from datetime import datetime
 
@@ -10,16 +11,16 @@ class ModelName(str, Enum):
 
 class QueryInput(BaseModel):
     question: str
-    session_id: str = Field(default=None)
-    model: ModelName = Field(default=ModelName.LLAMA3_2)
-    selected_sites: list = Field(default=None)
-    agent_type: str = Field(default="rag")  # <-- Новый параметр
+    session_id: Optional[str] = None
+    model: ModelName = ModelName.LLAMA3_2
+    selected_sites: Optional[List[str]] = None
+    agent_type: Optional[str] = "rag"
 
 class QueryResponse(BaseModel):
     answer: str
     session_id: str
     model: ModelName
-    audio_file: str = Field(default=None)  # Новый параметр для пути к аудиофайлу
+    audio_file: Optional[str] = None  # Fixed: Make optional
 
 class DocumentInfo(BaseModel):
     id: int

@@ -52,5 +52,5 @@ api/chroma_db
 
 app.log
 chroma.sqlite3
-piper
-tts
+
+/.wav

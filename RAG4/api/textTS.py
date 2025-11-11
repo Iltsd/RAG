@@ -2,7 +2,7 @@ import wave
 import os
 from piper import PiperVoice, SynthesisConfig
 
-def synthesize_speech(text: str, voice_model_path: str = "tts/voices/en_US-amy-medium.onnx", output_file: str = "tts/output/response.wav") -> str:
+def synthesize_speech(text: str, voice_model_path: str = "/home/showee/RAG/RAG4/api/tts/voices/en_US-amy-medium.onnx", output_file: str = "/home/showee/RAG/RAG4/api/tts/output/response.wav") -> str:
     """
     Синтезирует речь из текста с помощью Piper TTS и сохраняет в WAV-файл.
     

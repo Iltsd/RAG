@@ -58,7 +58,7 @@ class SummarizerAgent:
         """
         Суммирует полный ответ.
         """
-        summary_prompt = f"Суммаризуй следующий текст кратко (2-3 предложения): {state['full_answer']}"
+        summary_prompt = f"Summarize next text in few sentences: {state['full_answer']}"
         summary = self.llm.invoke(summary_prompt)
         answer = summary
         
@@ -81,7 +81,7 @@ class PreprocessorAgent:
         """
         # Простая предобработка: очистка, форматирование
         cleaned_query = state["query"].strip().replace("\n", " ").replace("\t", " ")
-        prompt = f"Форматируй и уточни следующий запрос для поиска: {cleaned_query}"
+        prompt = f"Format and refine your next search query: {cleaned_query}"
         formatted_query = self.llm.invoke(prompt)
         
         return {
@@ -162,7 +162,7 @@ def run_agent_chain(query: str, chain_type: str = "rag", model_name: str = "llam
     
     if chain_type == "rag":
         graph = create_rag_graph(model_name)
-    elif chain_type == "summary":
+    elif chain_type == "summarizer":
         graph = create_summary_graph(model_name)
     else:
         raise ValueError(f"Unknown chain_type: {chain_type}")

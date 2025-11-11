@@ -19,7 +19,6 @@ app = FastAPI()
 
 
 # В эндпоинте /chat (замените логику генерации ответа)
-from rag_app import RAGChain, SummaryChain  # Импорт цепочки (или SummaryChain)
 
 from rag_app import run_agent_chain  # Импорт функции
 
@@ -29,11 +28,11 @@ def chat(query_input: QueryInput):
     logging.info(f"Session ID: {session_id}, Query: {query_input.question}")
     
     # Выбор цепочки по параметру
-    chain_type = query_input.chain_type or "rag"
+    agent_type = query_input.agent_type or "rag"
     
     result = run_agent_chain(
         query_input.question, 
-        chain_type, 
+        agent_type, 
         query_input.model.value, 
         session_id
     )

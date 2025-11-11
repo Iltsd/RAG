@@ -189,13 +189,10 @@ def display_chat_interface():
         # КНОПКА ВСЕГДА ПОЯВЛЯЕТСЯ ДЛЯ СООБЩЕНИЙ БОТА
         if message["role"] == "assistant":
             audio_path = message.get("audio_file")
-            if audio_path and os.path.exists(audio_path):
-                if st.button("Play Audio", key=f"play_{i}"):
-                    with open(audio_path, "rb") as f:
-                        st.audio(f.read(), format="audio/wav")
-            else:
-                # Кнопка всё равно есть, но неактивна
-                st.button("Play Audio", disabled=True, key=f"disabled_{i}")
+            if st.button("Play Audio", key=f"play_{i}"):
+                with open(audio_path, "rb") as f:
+                    st.audio(f.read(), format="audio/wav")
+        
 
     if prompt := st.chat_input("Введите ваш вопрос..."):
         st.session_state.messages.append({"role": "U", "content": prompt})
