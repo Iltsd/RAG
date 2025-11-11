@@ -17,28 +17,29 @@ app = FastAPI()
 
 
 
-from rag_app import SimpleRAGAgent, SummarizerAgent  
 
-from rag_app import MultiAgentChain  # <-- Импорт цепочки
+# В эндпоинте /chat (замените логику генерации ответа)
+from rag_app import RAGChain, SummaryChain  # Импорт цепочки (или SummaryChain)
 
 @app.post("/chat", response_model=QueryResponse)
 def chat(query_input: QueryInput):
     session_id = query_input.session_id or str(uuid.uuid4())
-    logging.info(f"Session ID: {session_id}, User Query: {query_input.question}, Model: {query_input.model.value}")
+    logging.info(f"Session ID: {session_id}, Query: {query_input.question}, Model: {query_input.model.value}")
     
-    # Используем цепочку агентов
-    chain = MultiAgentChain(query_input.model.value)
-    result = chain.process_query(query_input.question, session_id)
+    # Используем цепочку (по умолчанию RAG)
+    agent_type = query_input.agent_type or "rag"
+    agents = {
+        "rag": RAGChain(query_input.model.value),
+        "summarizer": SummaryChain(query_input.model.value)
+    }
+    result = agents[agent_type].process_query(query_input.question, session_id)
     answer = result["answer"]
-    
-    # Генерация аудио (если не сгенерировано в цепочке)
-    audio_file_path = result.get("audio_file")
     
     return QueryResponse(
         answer=answer,
         session_id=result["session_id"],
         model=query_input.model,
-        audio_file=audio_file_path
+        audio_file=result["audio_file"]
     )
 
 @app.post("/forums-search")

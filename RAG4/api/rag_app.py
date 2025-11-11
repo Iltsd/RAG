@@ -80,7 +80,7 @@ class SummarizerAgent:
         # Суммируем ответ
         summary_prompt = f"Summarize text in 3 sentences(don't add this sentence 'Summarize text in 3 sentences'): {full_answer}"
         summary = self.llm.invoke(summary_prompt)
-        answer = summary  # Исправление: summary - строка
+        answer = summary
         
         # Озвучиваем суммари
         audio_file = synthesize_speech(answer)
@@ -139,55 +139,85 @@ class TTSAgent:
             "session_id": session_id
         }
 
-class MultiAgentChain:
+class SummaryChain:
     """
-    Цепочка агентов: последовательно вызывает Preprocessor → SimpleRAGAgent → SummarizerAgent → TTSAgent.
+    Цепочка для суммаризации: Preprocessor → Summarizer → TTS.
     """
     def __init__(self, model_name: str = "llama3.2"):
         self.model_name = model_name
         self.preprocessor = PreprocessorAgent()
-        self.rag_agent = SimpleRAGAgent(model_name)
         self.summarizer = SummarizerAgent(model_name)
-        self.tts_agent = TTSAgent()
+        self.tts = TTSAgent()
     
     def process_query(self, query: str, session_id: Optional[str] = None) -> Dict[str, str]:
         """
-        Вызывает агентов последовательно, передавая данные.
+        Вызывает цепочку последовательно: предобработка → суммари → озвучка.
         """
         if not session_id:
             session_id = str(uuid.uuid4())
         
         # 1. Предобработка
-        print("Step 1: Preprocessing...")
+        prep_result = self.preprocessor.process_query(query, session_id)
+        cleaned_query = prep_result["answer"]
+        
+        # 2. Суммаризация
+        summary_result = self.summarizer.process_query(cleaned_query, session_id)
+        summary_answer = summary_result["answer"]
+        
+        # 3. Озвучивание
+        tts_result = self.tts.process_query(summary_answer, session_id)
+        final_audio = tts_result["audio_file"]
+        
+        return {
+            "answer": summary_answer,
+            "audio_file": final_audio,
+            "session_id": session_id
+        }
+
+class RAGChain:
+    """
+    Цепочка для RAG: Preprocessor → SimpleRAG → TTS.
+    """
+    def __init__(self, model_name: str = "llama3.2"):
+        self.model_name = model_name
+        self.preprocessor = PreprocessorAgent()
+        self.rag = SimpleRAGAgent(model_name)
+        self.tts = TTSAgent()
+    
+    def process_query(self, query: str, session_id: Optional[str] = None) -> Dict[str, str]:
+        """
+        Вызывает цепочку последовательно: предобработка → RAG → озвучка.
+        """
+        if not session_id:
+            session_id = str(uuid.uuid4())
+        
+        # 1. Предобработка
+        print("Preprocessing...")
         prep_result = self.preprocessor.process_query(query, session_id)
         cleaned_query = prep_result["answer"]
         
         # 2. RAG-генерация
-        print("Step 2: RAG generation...")
-        rag_result = self.rag_agent.process_query(cleaned_query, session_id)
-        full_answer = rag_result["answer"]
+        rag_result = self.rag.process_query(cleaned_query, session_id, query=query)
+        rag_answer = rag_result["answer"]
         
-        # 3. Суммаризация
-        print("Step 3: Summarization...")
-        summary_result = self.summarizer.process_query(full_answer, session_id)
-        summary_answer = summary_result["answer"]
-        
-        # 4. Озвучивание
-        print("Step 4: TTS...")
-        tts_result = self.tts_agent.process_query(summary_answer, session_id)
+        # 3. Озвучивание
+        tts_result = self.tts.process_query(rag_answer, session_id)
         final_audio = tts_result["audio_file"]
         
         return {
-            "answer": summary_answer,  # Финальный ответ (суммари)
-            "full_answer": full_answer,  # Полный для деталей
+            "answer": rag_answer,
             "audio_file": final_audio,
             "session_id": session_id
         }
 
 # Пример использования
 if __name__ == "__main__":
-    chain = MultiAgentChain("llama3.2")
-    result = chain.process_query("What is HTTPS?")
-    print(f"Summary: {result['answer']}")
-    print(f"Full: {result['full_answer'][:100]}...")
-    print(f"Audio: {result['audio_file']}")
+    chains = {
+        "summary": SummaryChain(),
+        "rag": RAGChain()
+    }
+    query = "What is HTTPS?"
+    chain_type = "rag"  # Или "summary"
+    result = chains[chain_type].process_query(query)
+    print(f"Ответ: {result['answer']}")
+    print(f"Аудио: {result['audio_file']}")
