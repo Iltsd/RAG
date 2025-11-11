@@ -14,3 +14,5 @@ streamlit
 lxml
 selenium
 quote
+langgraph
+piper-tts

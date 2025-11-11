@@ -21,18 +21,22 @@ app = FastAPI()
 # В эндпоинте /chat (замените логику генерации ответа)
 from rag_app import RAGChain, SummaryChain  # Импорт цепочки (или SummaryChain)
 
+from rag_app import run_agent_chain  # Импорт функции
+
 @app.post("/chat", response_model=QueryResponse)
 def chat(query_input: QueryInput):
     session_id = query_input.session_id or str(uuid.uuid4())
-    logging.info(f"Session ID: {session_id}, Query: {query_input.question}, Model: {query_input.model.value}")
+    logging.info(f"Session ID: {session_id}, Query: {query_input.question}")
     
-    # Используем цепочку (по умолчанию RAG)
-    agent_type = query_input.agent_type or "rag"
-    agents = {
-        "rag": RAGChain(query_input.model.value),
-        "summarizer": SummaryChain(query_input.model.value)
-    }
-    result = agents[agent_type].process_query(query_input.question, session_id)
+    # Выбор цепочки по параметру
+    chain_type = query_input.chain_type or "rag"
+    
+    result = run_agent_chain(
+        query_input.question, 
+        chain_type, 
+        query_input.model.value, 
+        session_id
+    )
     answer = result["answer"]
     
     return QueryResponse(

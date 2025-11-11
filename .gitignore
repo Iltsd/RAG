@@ -26,6 +26,8 @@ env/
 ENV/
 .env
 
+rag_fixed_env/
+
 # IDE
 .idea/
 .vscode/
@@ -52,4 +54,3 @@ app.log
 chroma.sqlite3
 piper
 tts
-textTS.py

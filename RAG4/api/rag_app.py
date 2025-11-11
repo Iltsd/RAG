@@ -1,8 +1,18 @@
 from langchain_utils import get_rag_chain
 from textTS import synthesize_speech
-from typing import Dict, Optional
+from typing import Dict, Optional, Annotated, TypedDict
 import uuid
 from langchain_community.llms import Ollama  # Для простых агентов без RAG
+from langgraph.graph import StateGraph, END
+from langgraph.graph.message import add_messages
+
+# Состояние для передачи данных между агентами
+class AgentState(TypedDict):
+    query: str
+    answer: str
+    full_answer: str
+    audio_file: str
+    session_id: str
 
 class SimpleRAGAgent:
     """
@@ -12,87 +22,50 @@ class SimpleRAGAgent:
         self.model_name = model_name
         self.rag_chain = get_rag_chain(model_name)
    
-    def process_query(self, query: str, session_id: Optional[str] = None) -> Dict[str, str]:
+    def process_query(self, state: AgentState) -> AgentState:
         """
-        Обрабатывает запрос: генерирует ответ и озвучивает его.
-       
-        Args:
-            query (str): Запрос пользователя.
-            session_id (str): ID сессии (опционально).
-       
-        Returns:
-            Dict: {'answer': str, 'audio_file': str or None}
+        Обрабатывает запрос: генерирует ответ.
         """
-        if not session_id:
-            session_id = str(uuid.uuid4())
-       
-        # Получаем историю чата (если есть)
         from db_utils import get_chat_history
-        chat_history = get_chat_history(session_id)
+        chat_history = get_chat_history(state["session_id"])
        
         # Генерируем ответ через RAG
         result = self.rag_chain.invoke({
-            "input": query,
+            "input": state["query"],
             "chat_history": chat_history
         })
-        answer = result["answer"]
+        full_answer = result["answer"]
        
-        # Озвучиваем ответ
-        audio_file = synthesize_speech(answer)
-       
-        # Сохраняем в историю (опционально)
+        # Сохраняем в историю
         from db_utils import insert_application_logs
-        insert_application_logs(session_id, query, answer, self.model_name)
+        insert_application_logs(state["session_id"], state["query"], full_answer, self.model_name)
        
         return {
-            "answer": answer,
-            "audio_file": audio_file,
-            "session_id": session_id
+            "full_answer": full_answer,
+            "answer": full_answer,  # Пока что полный как базовый
+            "session_id": state["session_id"]
         }
 
 class SummarizerAgent:
     """
-    Агент для суммаризации: генерирует ответ, затем создаёт краткую версию (summary) и озвучивает её.
+    Агент для суммаризации: суммирует полный ответ.
     """
     def __init__(self, model_name: str = "llama3.2"):
         self.model_name = model_name
         self.llm = Ollama(model=model_name)
     
-    def process_query(self, query: str, session_id: Optional[str] = None) -> Dict[str, str]:
+    def process_query(self, state: AgentState) -> AgentState:
         """
-        Генерирует полный ответ, суммирует его и возвращает краткую версию с озвучкой.
+        Суммирует полный ответ.
         """
-        if not session_id:
-            session_id = str(uuid.uuid4())
-        
-        from db_utils import get_chat_history
-        chat_history = get_chat_history(session_id)
-        
-        # Генерируем полный ответ через RAG
-        from langchain_utils import get_rag_chain
-        rag_chain = get_rag_chain(self.model_name)
-        result = rag_chain.invoke({
-            "input": query,
-            "chat_history": chat_history
-        })
-        full_answer = result["answer"]
-        
-        # Суммируем ответ
-        summary_prompt = f"Summarize text in 3 sentences(don't add this sentence 'Summarize text in 3 sentences'): {full_answer}"
+        summary_prompt = f"Суммаризуй следующий текст кратко (2-3 предложения): {state['full_answer']}"
         summary = self.llm.invoke(summary_prompt)
         answer = summary
         
-        # Озвучиваем суммари
-        audio_file = synthesize_speech(answer)
-        
-        from db_utils import insert_application_logs
-        insert_application_logs(session_id, query, full_answer, self.model_name)  # Сохраняем полный ответ
-        
         return {
-            "answer": answer,  # Краткая версия
-            "full_answer": full_answer,  # Полный ответ (опционально)
-            "audio_file": audio_file,
-            "session_id": session_id
+            "answer": answer,
+            "full_answer": state["full_answer"],
+            "session_id": state["session_id"]
         }
 
 class PreprocessorAgent:
@@ -102,122 +75,111 @@ class PreprocessorAgent:
     def __init__(self):
         self.llm = Ollama(model="llama3.2")
     
-    def process_query(self, query: str, session_id: Optional[str] = None) -> Dict[str, str]:
+    def process_query(self, state: AgentState) -> AgentState:
         """
         Очищает и форматирует запрос для передачи следующему агенту.
         """
-        if not session_id:
-            session_id = str(uuid.uuid4())
-        
         # Простая предобработка: очистка, форматирование
-        cleaned_query = query.strip().replace("\n", " ").replace("\t", " ")
-        prompt = f"Format and refine the following search query: {cleaned_query}"
+        cleaned_query = state["query"].strip().replace("\n", " ").replace("\t", " ")
+        prompt = f"Форматируй и уточни следующий запрос для поиска: {cleaned_query}"
         formatted_query = self.llm.invoke(prompt)
-        answer = formatted_query  # Возвращаем уточнённый запрос как "ответ"
         
         return {
-            "answer": answer,  # Уточнённый запрос для следующего агента
-            "session_id": session_id
+            "query": formatted_query,
+            "session_id": state["session_id"]
         }
 
 class TTSAgent:
     """
     Агент для озвучивания: принимает текст и генерирует аудиофайл.
     """
-    def process_query(self, text: str, session_id: Optional[str] = None) -> Dict[str, str]:
+    def process_query(self, state: AgentState) -> AgentState:
         """
-        Озвучивает переданный текст и возвращает путь к файлу.
+        Озвучивает финальный ответ и возвращает путь к файлу.
         """
-        if not session_id:
-            session_id = str(uuid.uuid4())
-        
-        audio_file = synthesize_speech(text)
+        audio_file = synthesize_speech(state["answer"])
         
         return {
-            "answer": text,  # Текст (для цепочки)
+            "answer": state["answer"],
             "audio_file": audio_file,
-            "session_id": session_id
+            "session_id": state["session_id"]
         }
 
-class SummaryChain:
-    """
-    Цепочка для суммаризации: Preprocessor → Summarizer → TTS.
-    """
-    def __init__(self, model_name: str = "llama3.2"):
-        self.model_name = model_name
-        self.preprocessor = PreprocessorAgent()
-        self.summarizer = SummarizerAgent(model_name)
-        self.tts = TTSAgent()
+# Граф для RAG-цепочки: Preprocessor → SimpleRAG → Summarizer → TTS
+def create_rag_graph(model_name: str = "llama3.2"):
+    graph = StateGraph(AgentState)
     
-    def process_query(self, query: str, session_id: Optional[str] = None) -> Dict[str, str]:
-        """
-        Вызывает цепочку последовательно: предобработка → суммари → озвучка.
-        """
-        if not session_id:
-            session_id = str(uuid.uuid4())
-        
-        # 1. Предобработка
-        prep_result = self.preprocessor.process_query(query, session_id)
-        cleaned_query = prep_result["answer"]
-        
-        # 2. Суммаризация
-        summary_result = self.summarizer.process_query(cleaned_query, session_id)
-        summary_answer = summary_result["answer"]
-        
-        # 3. Озвучивание
-        tts_result = self.tts.process_query(summary_answer, session_id)
-        final_audio = tts_result["audio_file"]
-        
-        return {
-            "answer": summary_answer,
-            "audio_file": final_audio,
-            "session_id": session_id
-        }
+    # Добавляем узлы (агенты)
+    graph.add_node("preprocessor", PreprocessorAgent().process_query)
+    graph.add_node("rag", SimpleRAGAgent(model_name).process_query)
+    graph.add_node("summarizer", SummarizerAgent(model_name).process_query)
+    graph.add_node("tts", TTSAgent().process_query)
+    
+    # Добавляем ребра (последовательный поток)
+    graph.add_edge("preprocessor", "rag")
+    graph.add_edge("rag", "tts")
+    graph.add_edge("tts", END)
+    
+    # Начальный узел
+    graph.set_entry_point("preprocessor")
+    
+    # Компилируем граф
+    return graph.compile()
 
-class RAGChain:
-    """
-    Цепочка для RAG: Preprocessor → SimpleRAG → TTS.
-    """
-    def __init__(self, model_name: str = "llama3.2"):
-        self.model_name = model_name
-        self.preprocessor = PreprocessorAgent()
-        self.rag = SimpleRAGAgent(model_name)
-        self.tts = TTSAgent()
+# Граф для Summary-цепочки: Preprocessor → Summarizer → TTS
+def create_summary_graph(model_name: str = "llama3.2"):
+    graph = StateGraph(AgentState)
     
-    def process_query(self, query: str, session_id: Optional[str] = None) -> Dict[str, str]:
-        """
-        Вызывает цепочку последовательно: предобработка → RAG → озвучка.
-        """
-        if not session_id:
-            session_id = str(uuid.uuid4())
-        
-        # 1. Предобработка
-        print("Preprocessing...")
-        prep_result = self.preprocessor.process_query(query, session_id)
-        cleaned_query = prep_result["answer"]
-        
-        # 2. RAG-генерация
-        rag_result = self.rag.process_query(cleaned_query, session_id, query=query)
-        rag_answer = rag_result["answer"]
-        
-        # 3. Озвучивание
-        tts_result = self.tts.process_query(rag_answer, session_id)
-        final_audio = tts_result["audio_file"]
-        
-        return {
-            "answer": rag_answer,
-            "audio_file": final_audio,
-            "session_id": session_id
-        }
+    # Добавляем узлы
+    graph.add_node("preprocessor", PreprocessorAgent().process_query)
+    graph.add_node("summarizer", SummarizerAgent(model_name).process_query)
+    graph.add_node("tts", TTSAgent().process_query)
+    
+    # Добавляем ребра
+    graph.add_edge("preprocessor", "summarizer")
+    graph.add_edge("summarizer", "tts")
+    graph.add_edge("tts", END)
+    
+    # Начальный узел
+    graph.set_entry_point("preprocessor")
+    
+    # Компилируем граф
+    return graph.compile()
+
+# Функция для вызова графа (выбор по типу)
+def run_agent_chain(query: str, chain_type: str = "rag", model_name: str = "llama3.2", session_id: Optional[str] = None) -> Dict[str, str]:
+    """
+    Вызывает выбранную цепочку агентов.
+    """
+    if not session_id:
+        session_id = str(uuid.uuid4())
+    
+    # Создаём состояние
+    initial_state = {
+        "query": query,
+        "session_id": session_id
+    }
+    
+    if chain_type == "rag":
+        graph = create_rag_graph(model_name)
+    elif chain_type == "summary":
+        graph = create_summary_graph(model_name)
+    else:
+        raise ValueError(f"Unknown chain_type: {chain_type}")
+    
+    # Запускаем граф
+    final_state = graph.invoke(initial_state)
+    
+    return {
+        "answer": final_state["answer"],
+        "audio_file": final_state["audio_file"],
+        "session_id": final_state["session_id"]
+    }
 
 # Пример использования
 if __name__ == "__main__":
-    chains = {
-        "summary": SummaryChain(),
-        "rag": RAGChain()
-    }
     query = "What is HTTPS?"
     chain_type = "rag"  # Или "summary"
-    result = chains[chain_type].process_query(query)
+    result = run_agent_chain(query, chain_type)
     print(f"Ответ: {result['answer']}")
     print(f"Аудио: {result['audio_file']}")
