@@ -11,7 +11,6 @@ class DocumentAgent(BaseAgent):
         super().__init__("DocumentAgent")
     
     def process(self, data):
-        """Основной метод обработки - диспетчеризация по типу действия"""
         action = data.get("action")
         
         if action == "upload":
