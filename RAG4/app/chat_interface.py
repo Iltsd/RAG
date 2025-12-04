@@ -3,7 +3,6 @@ from api_utils import get_api_response, get_chat_history
 import time
 
 def load_chat_history(session_id):
-    """Вспомогательная функция для загрузки истории чата."""
     chat_history = get_chat_history(session_id)
     if chat_history:
         return [
@@ -13,7 +12,6 @@ def load_chat_history(session_id):
     return []
 
 def display_chat_interface():
-    # Custom CSS with high-contrast loading spinner
     st.markdown("""
     <style>
         /* High-contrast gradient spinner */
