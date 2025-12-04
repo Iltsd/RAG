@@ -32,7 +32,7 @@ def display_sidebar():
 )
 
         st.markdown("<h1 style='color: #3a7bd5;'>Источники данных</h1>", unsafe_allow_html=True)
-        forums_options = ["Stackoverflow", "Reddit", "Habr", "Mail.ru", "GeekForGeeks",]
+        forums_options = ["Stackoverflow", "Reddit", "Habr"]
         selected_sites = st.multiselect(
             "Выберите платформы",
             options=forums_options,

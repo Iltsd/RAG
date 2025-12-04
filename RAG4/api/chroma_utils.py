@@ -62,7 +62,7 @@ def search_forum(query, selected_sites):
             texts = search_reddit(query)
             sucsess = process_and_store_texts('Reddit', texts)
         if site == "Habr":
-            texts = search_habr(query)
+            texts = search_reddit(query)
             sucsess = process_and_store_texts('Habr', texts)
         if site == "Mail.ru":
             texts = search_mailru(query)

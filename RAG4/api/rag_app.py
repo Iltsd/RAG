@@ -58,13 +58,13 @@ class SummarizerAgent:
         """
         Суммирует полный ответ.
         """
-        summary_prompt = f"Summarize next text in few sentences: {state['full_answer']}"
+        summary_prompt = f"Summarize next text in few sentences: {state['query']}"
         summary = self.llm.invoke(summary_prompt)
         answer = summary
         
         return {
             "answer": answer,
-            "full_answer": state["full_answer"],
+            "full_answer": answer,
             "session_id": state["session_id"]
         }
 
@@ -105,45 +105,35 @@ class TTSAgent:
             "session_id": state["session_id"]
         }
 
-# Граф для RAG-цепочки: Preprocessor → SimpleRAG → Summarizer → TTS
 def create_rag_graph(model_name: str = "llama3.2"):
     graph = StateGraph(AgentState)
     
-    # Добавляем узлы (агенты)
     graph.add_node("preprocessor", PreprocessorAgent().process_query)
     graph.add_node("rag", SimpleRAGAgent(model_name).process_query)
     graph.add_node("summarizer", SummarizerAgent(model_name).process_query)
     graph.add_node("tts", TTSAgent().process_query)
     
-    # Добавляем ребра (последовательный поток)
     graph.add_edge("preprocessor", "rag")
     graph.add_edge("rag", "tts")
     graph.add_edge("tts", END)
     
-    # Начальный узел
     graph.set_entry_point("preprocessor")
     
-    # Компилируем граф
     return graph.compile()
 
-# Граф для Summary-цепочки: Preprocessor → Summarizer → TTS
 def create_summary_graph(model_name: str = "llama3.2"):
     graph = StateGraph(AgentState)
     
-    # Добавляем узлы
     graph.add_node("preprocessor", PreprocessorAgent().process_query)
     graph.add_node("summarizer", SummarizerAgent(model_name).process_query)
     graph.add_node("tts", TTSAgent().process_query)
     
-    # Добавляем ребра
     graph.add_edge("preprocessor", "summarizer")
     graph.add_edge("summarizer", "tts")
     graph.add_edge("tts", END)
     
-    # Начальный узел
     graph.set_entry_point("preprocessor")
     
-    # Компилируем граф
     return graph.compile()
 
 # Функция для вызова графа (выбор по типу)
