@@ -22,7 +22,6 @@ def display_sidebar():
             key="model"
         )
 
-            # В display_sidebar(), после выбора модели
         agent_options = ["rag", "summarizer"]
         selected_agent = st.selectbox(
         "Выберите тип агента",

@@ -10,9 +10,8 @@ def get_api_response(question, session_id, model):
     data = {
         "question": question,
         "model": model,
-        "agent_type": st.session_state.get("agent_type", "rag")  # <-- Добавьте это
+        "agent_type": st.session_state.get("agent_type", "rag") 
     }
-    # ... (остальное без изменений)
     if session_id:
         data["session_id"] = session_id
     selected_sites = st.session_state.get("selected_sites", [])
@@ -108,7 +107,6 @@ def get_chat_sessions():
         st.error(f"An error occurred while fetching chat sessions: {str(e)}")
         return []
 
-# Новая функция для получения истории чата
 def get_chat_history(session_id):
     try:
         head = {

@@ -20,7 +20,7 @@ class QueryResponse(BaseModel):
     answer: str
     session_id: str
     model: ModelName
-    audio_file: Optional[str] = None  # Fixed: Make optional
+    audio_file: Optional[str] = None
 
 class DocumentInfo(BaseModel):
     id: int

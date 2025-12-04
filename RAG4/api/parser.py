@@ -78,7 +78,7 @@ def search_habr(query: str):
 
     search_url = f"https://habr.com/ru/search/?q={query}&target_type=posts&sort=relevance"
     driver.get(search_url)
-    time.sleep(3)  # Подождите, пока страница полностью загрузится
+    time.sleep(3)  
 
     soup = BeautifulSoup(driver.page_source, 'lxml')
     posts = soup.find_all("div", class_="tm-article-snippet tm-article-snippet")
@@ -99,11 +99,9 @@ def search_habr(query: str):
             title = link_tag.text.strip()
             href = "https://habr.com" + link_tag["href"]
 
-            # Парсим количество лайков
             rating_tag = post.find("span", class_="tm-votes-meter__value")
             rating = int(rating_tag.text.strip()) if rating_tag else 0
 
-            # Переходим на страницу статьи
             driver.get(href)
             time.sleep(2)
             article_soup = BeautifulSoup(driver.page_source, "lxml")

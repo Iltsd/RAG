@@ -1,7 +1,7 @@
 import streamlit as st
 from api_utils import get_api_response, get_chat_history
 import time
-import os  # Добавил только это
+import os 
 
 def load_chat_history(session_id):
     """Вспомогательная функция для загрузки истории чата."""
@@ -14,7 +14,6 @@ def load_chat_history(session_id):
     return []
 
 def display_chat_interface():
-    # Custom CSS with high-contrast loading spinner
     st.markdown("""
     <style>
         /* High-contrast gradient spinner */
@@ -178,7 +177,6 @@ def display_chat_interface():
                 st.session_state.messages = load_chat_history(session_id)
                 st.session_state.chat_history_loaded = True
 
-    # Отображение сообщений + кнопка аудио
     for i, message in enumerate(st.session_state.messages):
         role_class = "user-message" if message["role"] == "U" else "assistant-message"
         st.markdown(
@@ -186,7 +184,6 @@ def display_chat_interface():
             unsafe_allow_html=True
         )
 
-        # КНОПКА ВСЕГДА ПОЯВЛЯЕТСЯ ДЛЯ СООБЩЕНИЙ БОТА
         if message["role"] == "assistant":
             audio_path = message.get("audio_file")
             if st.button("Play Audio", key=f"play_{i}"):
@@ -215,13 +212,12 @@ def display_chat_interface():
             if response:
                 st.session_state.session_id = response.get('session_id')
                 answer = response['answer']
-                audio_file = response.get('audio_file')  # может быть None
+                audio_file = response.get('audio_file') 
 
-                # ВАЖНО: сохраняем audio_file (даже если None)
                 st.session_state.messages.append({
                     "role": "assistant",
                     "content": answer,
-                    "audio_file": audio_file  # всегда сохраняем
+                    "audio_file": audio_file 
                 })
 
                 st.markdown(

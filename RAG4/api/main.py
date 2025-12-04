@@ -16,18 +16,13 @@ logging.basicConfig(filename='app.log', level=logging.INFO)
 app = FastAPI()
 
 
-
-
-# В эндпоинте /chat (замените логику генерации ответа)
-
-from rag_app import run_agent_chain  # Импорт функции
+from rag_app import run_agent_chain  
 
 @app.post("/chat", response_model=QueryResponse)
 def chat(query_input: QueryInput):
     session_id = query_input.session_id or str(uuid.uuid4())
     logging.info(f"Session ID: {session_id}, Query: {query_input.question}")
     
-    # Выбор цепочки по параметру
     agent_type = query_input.agent_type or "rag"
     
     result = run_agent_chain(
