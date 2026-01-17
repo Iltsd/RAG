@@ -101,7 +101,6 @@ def get_chat_sessions():
         st.error(f"An error occurred while fetching chat sessions: {str(e)}")
         return []
 
-# Новая функция для получения истории чата
 def get_chat_history(session_id):
     try:
         head = {
