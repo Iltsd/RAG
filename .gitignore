@@ -26,7 +26,7 @@ env/
 ENV/
 .env
 
-rag_fixed_env/
+
 
 # IDE
 .idea/
