@@ -1,0 +1,1034 @@
+/* ============================================
+   CSS в стиле Streamlit - For&Com Chatbot
+   Адаптировано под дизайн Streamlit с улучшениями
+   ============================================ */
+
+/* ===== СБРОС СТИЛЕЙ И БАЗОВЫЕ НАСТРОЙКИ ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+body {
+    background-color: #f0f2f6;  /* Фон как в Streamlit */
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* ===== ОСНОВНОЙ КОНТЕЙНЕР ===== */
+.app-container {
+    display: flex;
+    width: 95%;
+    max-width: 1400px;
+    height: 90vh;
+    background-color: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+/* Контейнер предложений */
+.suggestions-container {
+    margin: 20px 0;
+    padding: 12px;
+    background: #f8f9fc;
+    border-radius: 12px;
+    border: 1px solid #e6e9ef;
+}
+
+.suggestions-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #3a7bd5;
+    margin-bottom: 10px;
+}
+
+.suggestions-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.suggestion-btn {
+    background: white;
+    border: 1px solid #d5dae5;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #0f2641;
+}
+
+.suggestion-btn:hover {
+    background: #3a7bd5;
+    color: white;
+    border-color: #3a7bd5;
+    transform: translateY(-1px);
+}
+.autocomplete-items {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #d5dae5;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+
+.autocomplete-items div {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.1s;
+}
+
+.autocomplete-items div:hover {
+    background: #f0f2f6;
+}
+
+/* ===== БОКОВАЯ ПАНЕЛЬ (SIDEBAR) ===== */
+.sidebar {
+    width: 320px;
+    background-color: #ffffff;
+    border-right: 1px solid #e6e9ef;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 20px 16px;
+}
+
+/* Скроллбар в стиле Streamlit */
+.sidebar::-webkit-scrollbar {
+    width: 8px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: #f1f3f7;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: #c1c9d2;
+    border-radius: 4px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: #a0aab5;
+}
+
+/* Заголовок боковой панели */
+.sidebar-header {
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+.sidebar-header h2 {
+    color: #0f2641;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+}
+
+/* Секции в боковой панели */
+.sidebar-section {
+    margin-bottom: 28px;
+}
+
+.sidebar-section h3 {
+    color: #31333f;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    border-bottom: 1px solid #e6e9ef;
+    padding-bottom: 8px;
+}
+
+/* Разделители */
+hr {
+    border: none;
+    border-top: 1px solid #e6e9ef;
+    margin: 20px 0;
+}
+
+/* ===== ЭЛЕМЕНТЫ УПРАВЛЕНИЯ В СТИЛЕ STREAMLIT ===== */
+
+/* Selectbox (выпадающий список) */
+.sidebar-select {
+    width: 100%;
+    padding: 10px 14px;
+    background-color: #f9fafc;
+    border: 1px solid #d5dae5;
+    border-radius: 8px;
+    color: #0f2641;
+    font-size: 14px;
+    font-weight: 400;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235f6c84' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+}
+
+.sidebar-select:hover {
+    border-color: #9aa5b8;
+}
+
+.sidebar-select:focus {
+    border-color: #3a7bd5;
+    box-shadow: 0 0 0 3px rgba(58, 123, 213, 0.1);
+}
+
+/* Чекбоксы (checkbox) */
+.checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #31333f;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #d5dae5;
+    border-radius: 4px;
+    cursor: pointer;
+    accent-color: #3a7bd5;  /* Цвет галочки в современных браузерах */
+}
+
+.checkbox-group small {
+    color: #6b7a91;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+/* Кнопки в стиле Streamlit */
+.sidebar-btn {
+    width: 100%;
+    padding: 10px 16px;
+    margin-bottom: 8px;
+    background-color: #ffffff;
+    border: 1px solid #d5dae5;
+    border-radius: 8px;
+    color: #31333f;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.sidebar-btn:hover {
+    background-color: #f0f2f6;
+    border-color: #9aa5b8;
+}
+
+.sidebar-btn:active {
+    background-color: #e1e5ec;
+}
+
+/* Кнопка опасного действия (удаление) */
+.sidebar-btn.danger {
+    color: #dc3545;
+    border-color: #ffd7da;
+}
+
+.sidebar-btn.danger:hover {
+    background-color: #fff5f6;
+    border-color: #ffaeb5;
+}
+
+/* Поле загрузки файла */
+input[type="file"] {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 12px;
+    background-color: #f9fafc;
+    border: 1px dashed #d5dae5;
+    border-radius: 8px;
+    color: #31333f;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+input[type="file"]::file-selector-button {
+    padding: 6px 12px;
+    margin-right: 10px;
+    background-color: #ffffff;
+    border: 1px solid #d5dae5;
+    border-radius: 6px;
+    color: #31333f;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+input[type="file"]::file-selector-button:hover {
+    background-color: #f0f2f6;
+}
+
+/* Статус загрузки */
+#upload-status {
+    color: #3a7bd5;
+    font-size: 13px;
+    margin-top: 6px;
+    font-weight: 500;
+}
+
+/* Список документов */
+#doc-list {
+    list-style: none;
+    background-color: #f9fafc;
+    border: 1px solid #e6e9ef;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin: 10px 0;
+    max-height: 120px;
+    overflow-y: auto;
+    font-size: 13px;
+}
+
+#doc-list li {
+    padding: 4px 0;
+    color: #31333f;
+    border-bottom: 1px solid #e6e9ef;
+}
+
+#doc-list li:last-child {
+    border-bottom: none;
+}
+
+/* Выпадающий список для удаления */
+#doc-delete-select {
+    width: 100%;
+    padding: 8px 12px;
+    margin: 8px 0;
+    background-color: #f9fafc;
+    border: 1px solid #d5dae5;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #31333f;
+}
+
+/* ===== ОСНОВНАЯ ОБЛАСТЬ ЧАТА ===== */
+.chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: #ffffff;
+}
+
+/* Заголовок чата (как в Streamlit) */
+.chat-header {
+    padding: 20px 24px;
+    background: linear-gradient(90deg, #3a7bd5 0%, #2a5da0 100%);
+    border-bottom: 1px solid #e6e9ef;
+}
+
+.chat-header h1 {
+    color: #ffffff;
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    margin: 0;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Контейнер сообщений */
+.messages-container {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background-color: #ffffff;
+}
+
+/* Скроллбар для сообщений */
+.messages-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.messages-container::-webkit-scrollbar-track {
+    background: #f1f3f7;
+}
+
+.messages-container::-webkit-scrollbar-thumb {
+    background: #c1c9d2;
+    border-radius: 4px;
+}
+
+/* ===== СТИЛИ СООБЩЕНИЙ (КАК В STREAMLIT) ===== */
+.message {
+    max-width: 80%;
+    padding: 12px 18px;
+    border-radius: 18px;
+    line-height: 1.5;
+    font-size: 15px;
+    word-wrap: break-word;
+    position: relative;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Сообщение пользователя (справа, как в Streamlit) */
+.message.user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #3a7bd5, #2a5da0);
+    color: white;
+    border-bottom-right-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Сообщение ассистента (слева, как в Streamlit) */
+.message.assistant {
+    align-self: flex-start;
+    background-color: #f0f2f6;
+    color: #0f2641;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+/* Кнопка воспроизведения аудио */
+.audio-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 16px;
+    padding: 6px 12px;
+    margin-top: 8px;
+    color: white;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.message.assistant .audio-btn {
+    background: #ffffff;
+    border: 1px solid #d5dae5;
+    color: #31333f;
+}
+
+.audio-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.message.assistant .audio-btn:hover {
+    background: #f0f2f6;
+}
+
+/* ===== ИНДИКАТОР ЗАГРУЗКИ (КАК В STREAMLIT) ===== */
+.loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #e6e9ef;
+    border-top: 4px solid #3a7bd5;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ===== ОБЛАСТЬ ВВОДА (КАК В STREAMLIT) ===== */
+.input-area {
+    display: flex;
+    gap: 12px;
+    padding: 20px 24px;
+    background-color: #ffffff;
+    border-top: 1px solid #e6e9ef;
+}
+
+/* Текстовое поле ввода */
+#message-input {
+    flex: 1;
+    padding: 12px 18px;
+    background-color: #f9fafc;
+    border: 1px solid #d5dae5;
+    border-radius: 24px;
+    color: #0f2641;
+    font-size: 15px;
+    font-family: inherit;
+    resize: none;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#message-input:hover {
+    border-color: #9aa5b8;
+}
+
+#message-input:focus {
+    border-color: #3a7bd5;
+    box-shadow: 0 0 0 3px rgba(58, 123, 213, 0.1);
+}
+
+#message-input::placeholder {
+    color: #8b98ae;
+}
+
+/* Кнопка отправки */
+.send-btn {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #3a7bd5, #2a5da0);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 20px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.send-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(58, 123, 213, 0.3);
+}
+
+.send-btn:active {
+    transform: scale(0.95);
+}
+
+/* ===== АДАПТИВНЫЙ ДИЗАЙН (ДЛЯ МОБИЛЬНЫХ) ===== */
+@media (max-width: 768px) {
+    .app-container {
+        flex-direction: column;
+        width: 100%;
+        height: 100vh;
+        border-radius: 0;
+    }
+    
+    .sidebar {
+        width: 100%;
+        max-height: 40vh;
+        border-right: none;
+        border-bottom: 1px solid #e6e9ef;
+    }
+    
+    .message {
+        max-width: 90%;
+    }
+    
+    .chat-header h1 {
+        font-size: 24px;
+    }
+    
+    .input-area {
+        padding: 12px 16px;
+    }
+}
+
+/* ===== ДОПОЛНИТЕЛЬНЫЕ ЭЛЕМЕНТЫ ===== */
+
+/* Всплывающие подсказки (tooltips) */
+[title] {
+    position: relative;
+    cursor: help;
+}
+
+/* Анимация появления селектора чатов */
+#chat-sessions-select {
+    transition: all 0.3s ease;
+    margin-top: 8px;
+}
+
+/* Статусные сообщения */
+.success-message {
+    color: #28a745;
+    font-size: 13px;
+    margin-top: 4px;
+}
+
+.error-message {
+    color: #dc3545;
+    font-size: 13px;
+    margin-top: 4px;
+}
+
+/* Пустой список документов */
+#doc-list:empty::after {
+    content: 'Нет загруженных документов';
+    display: block;
+    color: #8b98ae;
+    font-style: italic;
+    text-align: center;
+    padding: 12px;
+}
+
+/* ===== УЛУЧШЕННЫЕ СТИЛИ ДЛЯ ФОРМАТИРОВАНИЯ ===== */
+
+/* Основные параграфы */
+.message p {
+    margin: 0 0 12px 0;
+    line-height: 1.6;
+}
+
+.message p:last-child {
+    margin-bottom: 0;
+}
+
+/* Жирный текст */
+.message strong {
+    font-weight: 700;
+    color: #2a5da0; /* Темно-синий для жирного текста */
+    display: inline-block;
+    margin-top: 8px;
+}
+
+.message.user strong {
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+/* Списки */
+.message ul, .message ol {
+    margin: 8px 0 16px 0;
+    padding-left: 24px;
+}
+
+.message li {
+    margin: 4px 0;
+    line-height: 1.5;
+    position: relative;
+}
+
+/* Нумерованные списки */
+.message ol {
+    list-style-type: none;
+    counter-reset: item;
+}
+
+.message ol li {
+    counter-increment: item;
+    padding-left: 8px;
+}
+
+.message ol li:before {
+    content: counter(item) ".";
+    color: #3a7bd5;
+    font-weight: 600;
+    position: absolute;
+    left: -24px;
+}
+
+.message.user ol li:before {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Маркированные списки */
+.message ul {
+    list-style-type: none;
+}
+
+.message ul li:before {
+    content: "•";
+    color: #3a7bd5;
+    font-weight: bold;
+    position: absolute;
+    left: -16px;
+}
+
+.message.user ul li:before {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Вложенные списки */
+.message ul ul, .message ol ol,
+.message ul ol, .message ol ul {
+    margin-left: 20px;
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+/* Блоки кода */
+.message pre {
+    background: #1e1e2e;
+    color: #e0e0e0;
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 12px 0;
+    font-family: 'Fira Code', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    border: 1px solid #333;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.message pre code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    font-size: inherit;
+    font-family: inherit;
+    white-space: pre;
+}
+
+/* Инлайн код */
+.message code {
+    background: #f0f2f6;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Fira Code', 'Courier New', monospace;
+    font-size: 13px;
+    color: #d63384;
+    border: 1px solid #e0e0e0;
+}
+
+.message.user code {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Специфичные стили для Python кода */
+.language-python .keyword {
+    color: #ff79c6;
+}
+
+.language-python .string {
+    color: #f1fa8c;
+}
+
+.language-python .function {
+    color: #50fa7b;
+}
+
+.language-python .comment {
+    color: #6272a4;
+    font-style: italic;
+}
+/* Добавьте это в ваш CSS файл */
+.message {
+    white-space: pre-wrap;  /* Сохраняет пробелы и переносы */
+    word-wrap: break-word;   /* Переносит длинные слова */
+}
+
+.message-content {
+    width: 100%;
+}
+
+.message br {
+    display: block;
+    content: "";
+    margin-top: 0.5em;
+}
+/* Отступы между секциями */
+.message br + strong {
+    margin-top: 12px;
+    display: inline-block;
+}
+
+/* Стили для разделителей (если есть ---) */
+.message hr {
+    border: none;
+    border-top: 2px dashed #3a7bd5;
+    margin: 16px 0;
+    opacity: 0.3;
+}
+
+/* Для лучшей читаемости длинных строк */
+.message {
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}
+
+/* Адаптация под мобильные */
+@media (max-width: 768px) {
+    .message pre {
+        font-size: 11px;
+        padding: 10px;
+    }
+    
+    .message code {
+        font-size: 11px;
+    }
+}
+
+/* ============================================
+   ВСПЛЫВАЮЩИЕ ПОДСКАЗКИ (TOOLTIPS)
+   ============================================ */
+
+/* Базовые стили для элементов с подсказками */
+[data-tooltip] {
+    position: relative;
+    cursor: help;
+}
+
+/* Сама подсказка */
+[data-tooltip]:before {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px);
+    
+    /* Стили подсказки */
+    background: linear-gradient(135deg, #2c3e50, #1a2634);
+    color: white;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    white-space: nowrap;
+    z-index: 1000;
+    
+    /* Начальное состояние (скрыто) */
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    
+    /* Тень */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    
+    /* Стрелка */
+    pointer-events: none;
+}
+
+/* Стрелка подсказки */
+[data-tooltip]:after {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    
+    border-width: 6px;
+    border-style: solid;
+    border-color: #1a2634 transparent transparent transparent;
+    
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    
+    pointer-events: none;
+}
+
+/* Показываем подсказку при наведении */
+[data-tooltip]:hover:before,
+[data-tooltip]:hover:after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(-4px);
+}
+
+[data-tooltip]:hover:after {
+    transform: translateX(-50%) translateY(2px);
+}
+
+/* ============================================
+   ПОДСКАЗКИ ДЛЯ КОНКРЕТНЫХ ЭЛЕМЕНТОВ
+   ============================================ */
+
+/* Подсказки для кнопок */
+.sidebar-btn[data-tooltip]:before {
+    white-space: nowrap;
+}
+
+/* Подсказки для выпадающих списков */
+.sidebar-select[data-tooltip]:before {
+    white-space: nowrap;
+    bottom: auto;
+    top: 100%;
+    transform: translateX(-50%) translateY(8px);
+}
+
+.sidebar-select[data-tooltip]:after {
+    bottom: auto;
+    top: 100%;
+    transform: translateX(-50%) translateY(-4px);
+    border-color: transparent transparent #1a2634 transparent;
+}
+
+.sidebar-select[data-tooltip]:hover:before {
+    transform: translateX(-50%) translateY(4px);
+}
+
+.sidebar-select[data-tooltip]:hover:after {
+    transform: translateX(-50%) translateY(-2px);
+}
+
+/* Подсказки для чекбоксов */
+.checkbox-group label[data-tooltip] {
+    position: relative;
+}
+
+.checkbox-group label[data-tooltip]:before {
+    bottom: auto;
+    top: 100%;
+    transform: translateX(-50%) translateY(8px);
+    white-space: nowrap;
+}
+
+.checkbox-group label[data-tooltip]:after {
+    bottom: auto;
+    top: 100%;
+    transform: translateX(-50%) translateY(-4px);
+    border-color: transparent transparent #1a2634 transparent;
+}
+
+/* Подсказки для поля ввода */
+#message-input[data-tooltip]:before {
+    bottom: auto;
+    top: 100%;
+    transform: translateX(0) translateY(8px);
+    left: 0;
+}
+
+#message-input[data-tooltip]:after {
+    bottom: auto;
+    top: 100%;
+    transform: translateX(0) translateY(-4px);
+    left: 20px;
+    border-color: transparent transparent #1a2634 transparent;
+}
+
+/* Подсказки для кнопки отправки */
+.send-btn[data-tooltip]:before {
+    white-space: nowrap;
+}
+
+/* Подсказки для сообщений */
+.message[data-tooltip]:before {
+    bottom: auto;
+    top: 100%;
+    transform: translateX(0) translateY(8px);
+    left: 0;
+    white-space: normal;
+    max-width: 300px;
+    text-align: left;
+}
+
+.message[data-tooltip]:after {
+    bottom: auto;
+    top: 100%;
+    transform: translateX(0) translateY(-4px);
+    left: 20px;
+    border-color: transparent transparent #1a2634 transparent;
+}
+
+/* Подсказки для аудио-кнопок */
+.audio-btn[data-tooltip]:before {
+    white-space: nowrap;
+}
+
+/* ============================================
+   РАЗНЫЕ ТИПЫ ПОДСКАЗОК
+   ============================================ */
+
+/* Предупреждения (красные) */
+[data-tooltip].warning:before {
+    background: linear-gradient(135deg, #c0392b, #e74c3c);
+}
+
+[data-tooltip].warning:after {
+    border-color: #c0392b transparent transparent transparent;
+}
+
+/* Успех (зеленые) */
+[data-tooltip].success:before {
+    background: linear-gradient(135deg, #27ae60, #2ecc71);
+}
+
+[data-tooltip].success:after {
+    border-color: #27ae60 transparent transparent transparent;
+}
+
+/* Информация (синие) */
+[data-tooltip].info:before {
+    background: linear-gradient(135deg, #2980b9, #3498db);
+}
+
+[data-tooltip].info:after {
+    border-color: #2980b9 transparent transparent transparent;
+}
+
+/* Подсказки справа */
+[data-tooltip].right:before {
+    left: 100%;
+    bottom: 50%;
+    transform: translateY(50%) translateX(8px);
+}
+
+[data-tooltip].right:after {
+    left: 100%;
+    bottom: 50%;
+    transform: translateY(50%) translateX(-4px);
+    border-color: transparent #1a2634 transparent transparent;
+}
+
+/* Подсказки слева */
+[data-tooltip].left:before {
+    left: auto;
+    right: 100%;
+    bottom: 50%;
+    transform: translateY(50%) translateX(-8px);
+}
+
+[data-tooltip].left:after {
+    left: auto;
+    right: 100%;
+    bottom: 50%;
+    transform: translateY(50%) translateX(4px);
+    border-color: transparent transparent transparent #1a2634;
+}
+
+/* Анимация появления */
+@keyframes tooltipAppear {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(0);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(-4px);
+    }
+}
+
+[data-tooltip]:hover:before {
+    animation: tooltipAppear 0.2s ease forwards;
+}

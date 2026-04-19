@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>For&Com Chatbot</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Боковая панель (sidebar) -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>Панель управления</h2>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3>Выбор модели</h3>
+                <div class="tooltip-wrapper" data-tooltip="Выберите языковую модель для обработки запросов">
+                    <select id="model-select" class="sidebar-select">
+                        <option value="llama3.2" selected>llama3.2</option>
+                        <option value="llama3.1">llama3.1</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>Тип агента</h3>
+                <div class="tooltip-wrapper" data-tooltip="RAG - поиск по документам, Summarizer - краткое изложение">
+                    <select id="agent-type-select" class="sidebar-select">
+                        <option value="rag" selected>RAG</option>
+                        <option value="summarizer">Summarizer</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3>Источники данных</h3>
+                <div class="checkbox-group">
+                    <label data-tooltip="Поиск ответов на Stack Overflow">
+                        <input type="checkbox" value="Stackoverflow"> Stackoverflow
+                    </label>
+                    <label data-tooltip="Поиск обсуждений на Reddit">
+                        <input type="checkbox" value="Reddit"> Reddit
+                    </label>
+                    <label data-tooltip="Поиск статей на Хабре">
+                        <input type="checkbox" value="Habr"> Habr
+                    </label>
+                </div>
+                <small data-tooltip="Максимум можно выбрать 2 платформы">Макс. 2</small>
+            </div>
+            
+            <hr>
+            
+            <div class="sidebar-section">
+                <h3>История чатов</h3>
+                <button id="new-chat-btn" class="sidebar-btn" 
+                        data-tooltip="Начать новый диалог 
+                        (текущий будет очищен)">
+                    ➕ Новый чат
+                </button>
+                <button id="load-chats-btn" class="sidebar-btn"
+                        data-tooltip="Загрузить список предыдущих диалогов">
+                    📋 Выбрать чат
+                </button>
+                
+                <select id="chat-sessions-select" class="sidebar-select" style="display: none;"
+                        data-tooltip="Выберите чат для просмотра истории">
+                    <option value="">Загрузка...</option>
+                </select>
+            </div>
+            
+            <hr>
+            
+            <div class="sidebar-section">
+                <h3>Загрузка документов</h3>
+                <input type="file" id="file-upload" accept=".pdf,.docx,.html"
+                       data-tooltip="Поддерживаются форматы: PDF, DOCX, HTML">
+                <button id="upload-btn" class="sidebar-btn"
+                        data-tooltip="Загрузить документ в базу знаний">
+                    📤 Загрузить
+                </button>
+                <div id="upload-status"></div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3>Загруженные документы</h3>
+                <button id="refresh-docs-btn" class="sidebar-btn"
+                        data-tooltip="Обновить список загруженных документов">
+                    🔄 Обновить
+                </button>
+                <ul id="doc-list" data-tooltip="Список документов в базе знаний"></ul>
+                <select id="doc-delete-select" data-tooltip="Выберите документ для удаления"></select>
+                <button id="delete-doc-btn" class="sidebar-btn danger"
+                        data-tooltip="Удалить выбранный документ из базы знаний">
+                    🗑 Удалить
+                </button>
+            </div>
+        </aside>
+
+        <!-- Основной контент (чат) -->
+        <main class="chat-area">
+            <header class="chat-header">
+                <h1 data-tooltip="Чат с искусственным интеллектом на базе RAG">For&Com Chatbot</h1>
+            </header>
+            
+            <div class="messages-container" id="messages"
+                 data-tooltip="История вашего диалога с AI">
+                <!-- Сообщения будут добавляться сюда динамически -->
+            </div>
+            
+            <div class="input-area">
+                <div style="position: relative; flex: 1;">
+                    <textarea id="message-input" placeholder="Введите ваш вопрос..." rows="2"></textarea>
+                    <div id="autocomplete-list" class="autocomplete-items"></div>
+                </div>
+                <button id="send-btn" class="send-btn">➤</button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Аудио элемент для воспроизведения -->
+    <audio id="audio-player" style="display: none;"></audio>
+
+    <!-- Подключаем JavaScript модули -->
+    <script src="js/api.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/sidebar.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
+
+<!-- ===== СТИЛИ ДЛЯ ПОДСКАЗОК (ДОБАВЛЯЕМ ПРЯМО СЮДА) ===== -->
+    <style>
+        
+/* ============================================
+   ПОДСКАЗКИ С ЗАДЕРЖКОЙ 2 СЕКУНДЫ
+   ============================================ */
+
+/* Базовые стили для элементов с подсказками */
+[data-tooltip] {
+    position: relative;
+    cursor: help;
+}
+
+/* Текст подсказки - изначально скрыт */
+[data-tooltip]:after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e293b;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    white-space: nowrap;
+    z-index: 10000;
+    margin-bottom: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    pointer-events: none;
+    
+    /* Начальное состояние - скрыто */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    
+    /* ЗАДЕРЖКА 2 СЕКУНДЫ */
+    transition-delay: 0s;
+}
+
+/* Стрелка подсказки - изначально скрыта */
+[data-tooltip]:before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #1e293b;
+    margin-bottom: 2px;
+    z-index: 10000;
+    pointer-events: none;
+    
+    /* Начальное состояние - скрыто */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    
+    /* ЗАДЕРЖКА 2 СЕКУНДЫ */
+    transition-delay: 0s;
+}
+
+/* Показываем подсказку при наведении с задержкой 2 секунды */
+[data-tooltip]:hover:after,
+[data-tooltip]:hover:before {
+    opacity: 1;
+    visibility: visible;
+    
+    /* ЗАДЕРЖКА 2 СЕКУНДЫ перед появлением */
+    transition-delay: 0.7s;
+}
+
+/* ============================================
+   ДЛЯ SELECT ЭЛЕМЕНТОВ (через wrapper)
+   ============================================ */
+.select-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.select-wrapper[data-tooltip]:after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e293b;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    white-space: nowrap;
+    z-index: 10000;
+    margin-bottom: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    pointer-events: none;
+    
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    transition-delay: 0s;
+}
+
+.select-wrapper[data-tooltip]:before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #1e293b;
+    margin-bottom: 2px;
+    z-index: 10000;
+    pointer-events: none;
+    
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    transition-delay: 0s;
+}
+
+.select-wrapper[data-tooltip]:hover:after,
+.select-wrapper[data-tooltip]:hover:before {
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0.7s;
+}
+
+/* ============================================
+   РАЗНЫЕ ВАРИАНТЫ ЗАДЕРЖКИ
+   ============================================ */
+
+/* Быстрая подсказка (0.5 секунды) */
+[data-tooltip].fast:hover:after,
+[data-tooltip].fast:hover:before {
+    transition-delay: 0.5s;
+}
+
+/* Средняя подсказка (1 секунда) */
+[data-tooltip].medium:hover:after,
+[data-tooltip].medium:hover:before {
+    transition-delay: 1s;
+}
+
+/* Медленная подсказка (3 секунды) */
+[data-tooltip].slow:hover:after,
+[data-tooltip].slow:hover:before {
+    transition-delay: 3s;
+}
+
+/* Очень медленная подсказка (5 секунд) */
+[data-tooltip].very-slow:hover:after,
+[data-tooltip].very-slow:hover:before {
+    transition-delay: 5s;
+}
+
+/* Без задержки */
+[data-tooltip].no-delay:hover:after,
+[data-tooltip].no-delay:hover:before {
+    transition-delay: 0s;
+}
+
+/* ============================================
+   АНИМАЦИЯ ПОЯВЛЕНИЯ
+   ============================================ */
+@keyframes tooltipFadeIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+[data-tooltip]:hover:after,
+[data-tooltip]:hover:before,
+.select-wrapper[data-tooltip]:hover:after,
+.select-wrapper[data-tooltip]:hover:before {
+    animation: tooltipFadeIn 0.3s ease forwards;
+}
+
+/* ============================================
+   ДОПОЛНИТЕЛЬНЫЕ ЭФФЕКТЫ
+   ============================================ */
+
+/* Затемнение элемента при наведении (пока ждем подсказку) */
+[data-tooltip]:hover {
+    background-color: rgba(58, 123, 213, 0.05);
+    transition: background-color 0.3s;
+}
+
+/* Пульсация во время ожидания */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(58, 123, 213, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 5px rgba(58, 123, 213, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(58, 123, 213, 0);
+    }
+}
+
+[data-tooltip]:hover {
+    animation: pulse 2s infinite;
+}
+
+/* ============================================
+   ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ
+   ============================================ */
+@media (max-width: 768px) {
+    [data-tooltip]:after,
+    .select-wrapper[data-tooltip]:after {
+        font-size: 11px;
+        padding: 6px 10px;
+        white-space: normal;
+        max-width: 200px;
+    }
+    
+    /* На мобильных задержка меньше */
+    [data-tooltip]:hover:after,
+    [data-tooltip]:hover:before,
+    .select-wrapper[data-tooltip]:hover:after,
+    .select-wrapper[data-tooltip]:hover:before {
+        transition-delay: 1s;
+    }
+}
+    </style>

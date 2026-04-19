@@ -4,6 +4,7 @@ from langchain_utils import get_rag_chain
 from db_utils import insert_application_logs, get_chat_history, get_all_documents, insert_document_record, delete_document_record, get_all_chat_sessions  # Новый импорт
 from chroma_utils import index_document_to_chroma, delete_doc_from_chroma
 import os
+from fastapi.middleware.cors import CORSMiddleware
 import uuid
 import logging
 import shutil
@@ -15,6 +16,16 @@ logging.basicConfig(filename='app.log', level=logging.INFO)
 
 app = FastAPI()
 
+
+
+# Настройка CORS для всех источников (для разработки)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:8080", "http://127.0.0.1:8080", "http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],  # Разрешаем все методы (GET, POST, OPTIONS, etc.)
+    allow_headers=["*"],  # Разрешаем все заголовки
+)
 
 from rag_app import run_agent_chain  
 
