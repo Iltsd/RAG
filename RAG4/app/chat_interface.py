@@ -1,6 +1,13 @@
 import streamlit as st
-from api_utils import get_api_response, get_chat_history
+import requests
+import io
+import wave
 import time
+from api_utils import get_api_response_stream, get_chat_history
+
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'api'))
+from utils import strip_markdown
 
 def load_chat_history(session_id):
     chat_history = get_chat_history(session_id)
@@ -185,54 +192,142 @@ def display_chat_interface():
                 st.session_state.messages = load_chat_history(session_id)
                 st.session_state.chat_history_loaded = True
 
-    for message in st.session_state.messages:
+    audio_placeholder = st.empty()
+
+    def _fetch_tts(delta):
+        try:
+            resp = requests.get("http://localhost:8000/tts", params={"text": delta, "raw": True}, timeout=10)
+            if resp.status_code == 200:
+                return resp.content
+        except Exception:
+            pass
+        return None
+
+    def _play_pcm(pcm):
+        buf = io.BytesIO()
+        with wave.open(buf, "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(22050)
+            wf.writeframes(pcm)
+        audio_placeholder.audio(buf.getvalue(), format="audio/wav", autoplay=True)
+
+    def _play_tts(text):
+        if not st.session_state.get("tts_enabled", True):
+            return
+        spoken = st.session_state.get("tts_spoken_until", 0)
+        delta = text[spoken:]
+        if not delta.strip():
+            return
+        st.session_state.tts_spoken_until = len(text)
+        cleaned = strip_markdown(delta)
+        pcm = _fetch_tts(cleaned)
+        if pcm is None:
+            return
+        now = time.time()
+        playing_until = st.session_state.get("tts_playing_until", 0)
+        if now < playing_until:
+            st.session_state.setdefault("tts_queue", []).append((pcm, len(pcm) / 44100))
+            return
+        st.session_state.tts_playing_until = now + len(pcm) / 44100
+        _play_pcm(pcm)
+
+    def _flush_tts():
+        queue = st.session_state.get("tts_queue", [])
+        st.session_state.tts_queue = []
+        for pcm, duration in queue:
+            st.session_state.tts_playing_until = time.time() + duration
+            _play_pcm(pcm)
+            time.sleep(duration)
+
+    for i, message in enumerate(st.session_state.messages):
         role_class = "user-message" if message["role"] == "U" else "assistant-message"
-        st.markdown(
-            f"<div class='chat-container'><div class='chat-bubble {role_class}'>{message['content']}</div></div>",
-            unsafe_allow_html=True
-        )
+        if message["role"] == "U":
+            st.markdown(
+                f"<div class='chat-container'><div class='chat-bubble {role_class}'>{message['content']}</div></div>",
+                unsafe_allow_html=True
+            )
+        else:
+            col1, col2 = st.columns([0.95, 0.05])
+            with col1:
+                st.markdown(
+                    f"<div class='chat-container'><div class='chat-bubble {role_class}'>{message['content']}</div></div>",
+                    unsafe_allow_html=True
+                )
+            if st.session_state.get("tts_enabled", True):
+                with col2:
+                    if st.button("🔊", key=f"tts_{i}", help="Озвучить ответ"):
+                        cleaned = strip_markdown(message["content"])
+                        try:
+                            resp = requests.get("http://localhost:8000/tts", params={"text": cleaned, "raw": True})
+                            if resp.status_code == 200:
+                                buf = io.BytesIO()
+                                with wave.open(buf, "wb") as wf:
+                                    wf.setnchannels(1)
+                                    wf.setsampwidth(2)
+                                    wf.setframerate(22050)
+                                    wf.writeframes(resp.content)
+                                audio_placeholder.audio(buf.getvalue(), format="audio/wav", autoplay=True)
+                        except Exception:
+                            pass
 
     if prompt := st.chat_input("Введите ваш вопрос..."):
         st.session_state.messages.append({"role": "U", "content": prompt})
-        st.markdown(
-            f"<div class='chat-container'><div class='chat-bubble user-message'>{prompt}</div></div>",
-            unsafe_allow_html=True
-        )
+        st.session_state.tts_spoken_until = 0
+        st.session_state.tts_queue = []
 
-        with st.empty():
-            st.markdown("""
-            <div class="loading-container">
-                <div class="loading-spinner"></div>
-                <div class="loading-text">Processing request<span class="pulse-dots"></span></div>
-            </div>
-            """, unsafe_allow_html=True)
+        response_text = ""
+        message_placeholder = st.empty()
+        first_token = True
+        tts_char_counter = 0
+        TTS_CHAR_THRESHOLD = 50
 
-            time.sleep(0.3)
-            response = get_api_response(prompt, st.session_state.session_id, st.session_state.model)
-            st.empty()
+        tool_messages = []
 
-            if response:
-                st.session_state.session_id = response.get('session_id')
-                st.session_state.messages.append({"role": "assistant", "content": response['answer']})
-                st.markdown(
-                    f"<div class='chat-container'><div class='chat-bubble assistant-message'>{response['answer']}</div></div>",
+        for event in get_api_response_stream(prompt, st.session_state.session_id, st.session_state.model):
+            if "token" in event:
+                response_text += event["token"]
+                message_placeholder.markdown(
+                    f"<div class='chat-container'><div class='chat-bubble assistant-message'>{response_text}</div></div>",
                     unsafe_allow_html=True
                 )
-                st.markdown(
-                    f"""
-                        <div class='chat-container'>
-                            <div class='chat-bubble assistant-message'>
-                                {response['answer']}
-                            <div style="margin-top: 12px; font-size: 0.85em; color: #3a7bd5;">
-                        </div>
-                        </div>
-                        </div>
-                        """,
-                   unsafe_allow_html=True
+                if st.session_state.get("tts_enabled", True):
+                    tts_char_counter += len(event["token"])
+                    if first_token or tts_char_counter >= TTS_CHAR_THRESHOLD:
+                        _play_tts(response_text)
+                        first_token = False
+                        tts_char_counter = 0
+            elif "session_id" in event:
+                st.session_state.session_id = event["session_id"]
+            elif "tool_call" in event:
+                tc = event["tool_call"]
+                tool_messages.append(f"🔧 **{tc['tool']}**({tc['args']})...")
+                message_placeholder.markdown(
+                    "<br>".join(tool_messages) + "<br>" +
+                    f"<div class='chat-container'><div class='chat-bubble assistant-message'>{response_text}</div></div>",
+                    unsafe_allow_html=True
+                )
+            elif "tool_result" in event:
+                tr = event["tool_result"]
+                tool_messages.append(f"✅ **{tr['tool']}** → {tr['result'][:100]}")
+                message_placeholder.markdown(
+                    "<br>".join(tool_messages) + "<br>" +
+                    f"<div class='chat-container'><div class='chat-bubble assistant-message'>{response_text}</div></div>",
+                    unsafe_allow_html=True
+                )
+            elif "tool_error" in event:
+                te = event["tool_error"]
+                tool_messages.append(f"❌ **{te['tool']}** — {te['error'][:100]}")
+                message_placeholder.markdown(
+                    "<br>".join(tool_messages) + "<br>" +
+                    f"<div class='chat-container'><div class='chat-bubble assistant-message'>{response_text}</div></div>",
+                    unsafe_allow_html=True
                 )
 
-            else:
-                st.error("Не удалось получить ответ от API. Попробуйте снова.")
+        if response_text:
+            st.session_state.messages.append({"role": "assistant", "content": response_text})
+            if st.session_state.get("tts_enabled", True):
+                _flush_tts()
 
     if "chat_history_loaded" in st.session_state and st.session_state.show_chat_history:
         del st.session_state.chat_history_loaded

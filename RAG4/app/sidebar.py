@@ -22,6 +22,35 @@ def display_sidebar():
             key="model"
         )
 
+        st.markdown("<h1 style='color: #3a7bd5;'>Настройки обработки</h1>", unsafe_allow_html=True)
+        preprocessing_on = st.checkbox(
+            "Pre-processing (контекстный анализ вопроса)",
+            value=st.session_state.get("preprocessing_enabled", True),
+            help="Отключите для ускорения ответа, если не используете уточняющие вопросы"
+        )
+        st.session_state.preprocessing_enabled = preprocessing_on
+
+        retrieval_on = st.checkbox(
+            "RAG (поиск по документам)",
+            value=st.session_state.get("retrieval_enabled", True),
+            help="Отключите, чтобы отвечать только на основе знаний модели, без поиска по документам"
+        )
+        st.session_state.retrieval_enabled = retrieval_on
+
+        voice_on = st.checkbox(
+            "Voice (авто-озвучивание ответов)",
+            value=st.session_state.get("tts_enabled", True),
+            help="Автоматически озвучивать ответы ИИ. Также появляется кнопка 🔊 у каждого сообщения."
+        )
+        st.session_state.tts_enabled = voice_on
+
+        tools_on = st.checkbox(
+            "Tools (shell, файлы, web)",
+            value=st.session_state.get("tools_enabled", False),
+            help="Включить инструменты: Herta сможет выполнять shell-команды, читать/писать файлы и открывать URL"
+        )
+        st.session_state.tools_enabled = tools_on
+
         st.markdown("<h1 style='color: #3a7bd5;'>Источники данных</h1>", unsafe_allow_html=True)
         forums_options = ["Stackoverflow", "Reddit", "Habr", "Mail.ru", "GeekForGeeks",]
         selected_sites = st.multiselect(
@@ -36,6 +65,10 @@ def display_sidebar():
         st.markdown("---")
         st.markdown("<h1 style='color: #3a7bd5;'>Текущие настройки:</h1>", unsafe_allow_html=True)
         st.write(f"Модель: `{selected_model}`")
+        st.write(f"Pre-processing: {'✅' if preprocessing_on else '❌'}")
+        st.write(f"RAG: {'✅' if retrieval_on else '❌'}")
+        st.write(f"Voice: {'✅' if voice_on else '❌'}")
+        st.write(f"Tools: {'✅' if tools_on else '❌'}")
         st.write(f"Платформы: {', '.join(selected_sites) if selected_sites else 'Не выбраны'}")
 
         st.markdown("---")
@@ -50,6 +83,9 @@ def display_sidebar():
             st.session_state.show_chat_history = False
             st.session_state.show_chat_selector = False  
             st.session_state.messages = []
+            st.session_state.tts_spoken_until = 0
+            st.session_state.tts_playing_until = 0
+            st.session_state.tts_queue = []
 
         if st.button("Выбрать чат"):
             chat_sessions = get_chat_sessions()

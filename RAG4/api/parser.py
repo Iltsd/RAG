@@ -1,235 +1,236 @@
 from bs4 import BeautifulSoup
 import requests
 import time
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+import os
+
+
+STACKOVERFLOW_KEY = os.getenv("STACKOVERFLOW_KEY", "")
+
 
 def search_stackoverflow(query: str):
-    url = "https://api.stackexchange.com/2.3/search/advanced"
-    params = {
+    search_url = "https://api.stackexchange.com/2.3/search/advanced"
+    search_params = {
         "order": "desc",
         "sort": "relevance",
         "q": query,
         "site": "stackoverflow",
         "pagesize": 5,
+        "filter": "withbody",
     }
-    response = requests.get(url, params=params)
-    
-    if response.status_code != 200:
-        raise Exception(f"Ошибка запроса: {response.status_code}")
-    
-    data = response.json()
-    combined_text = []
-    
-    print(f"Найдено элементов в API: {len(data['items'])}")  
-    for item in data["items"][:len(data['items'])]:
+    if STACKOVERFLOW_KEY:
+        search_params["key"] = STACKOVERFLOW_KEY
+
+    resp = requests.get(search_url, params=search_params)
+    if resp.status_code != 200:
+        raise Exception(f"Stackoverflow API error: {resp.status_code}")
+
+    data = resp.json()
+    combined = []
+
+    for item in data.get("items", []):
         try:
-            url = item["link"]
-            response = requests.get(url)
-            if response.status_code != 200:
-                print(f"Не удалось загрузить страницу {url}")
-                continue
-            
-            soup = BeautifulSoup(response.text, 'lxml')
-            question = soup.find('div', class_="s-prose js-post-body")
-            right_answer = soup.find('div', class_="answercell post-layout--right")
-            
-            if right_answer:
-                text = right_answer.find('div', class_="s-prose js-post-body")
-                if text and text.get_text(strip=True):
-                    combined_text.append(f"Title: {item['title']}\nLink: {item['link']}\nQuestion: {question.get_text()}\nAnswer: {text.get_text(strip=True)}")
-                    print(f"Добавлен текст для {url}")  # Отладка
-                else:
-                    print(f"Не найден текст ответа для {url}")
-            else:
-                print(f"Не найден блок ответа для {url}")
+            question_id = item["question_id"]
+            title = item.get("title", "")
+            link = item.get("link", "")
+            question_body = BeautifulSoup(item.get("body", ""), "html.parser").get_text(strip=True)
+
+            answers_url = f"https://api.stackexchange.com/2.3/questions/{question_id}/answers"
+            answers_params = {
+                "order": "desc",
+                "sort": "votes",
+                "site": "stackoverflow",
+                "filter": "withbody",
+                "pagesize": 1,
+            }
+            if STACKOVERFLOW_KEY:
+                answers_params["key"] = STACKOVERFLOW_KEY
+
+            ans_resp = requests.get(answers_url, params=answers_params)
+            answer_text = ""
+            if ans_resp.status_code == 200:
+                ans_data = ans_resp.json()
+                if ans_data.get("items"):
+                    answer_text = BeautifulSoup(
+                        ans_data["items"][0].get("body", ""), "html.parser"
+                    ).get_text(strip=True)
+
+            combined.append(
+                f"Title: {title}\nLink: {link}\nQuestion: {question_body}\nAnswer: {answer_text}"
+            )
         except Exception as e:
-            print(f"Ошибка при обработке {url}: {e}")
-    
-    print(f"Итоговый список текстов: {combined_text}")  
-    return combined_text
+            print(f"Stackoverflow error processing item: {e}")
+
+    return combined
 
 
 def search_habr(query: str):
-    options = Options()
-    options.add_argument('--headless')
-    options.add_argument('--disable-gpu')
-    options.add_argument('--no-sandbox')
-    driver = webdriver.Chrome(options=options)
-
     search_url = f"https://habr.com/ru/search/?q={query}&target_type=posts&sort=relevance"
-    driver.get(search_url)
-    time.sleep(3)  
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
 
-    soup = BeautifulSoup(driver.page_source, 'lxml')
-    posts = soup.find_all("div", class_="tm-article-snippet tm-article-snippet")
+    resp = requests.get(search_url, headers=headers)
+    if resp.status_code != 200:
+        raise Exception(f"Habr search error: {resp.status_code}")
 
+    soup = BeautifulSoup(resp.text, "lxml")
     articles = []
-    print(f"Найдено постов: {len(posts)}")
 
-    post_counter=0
-    for post in posts:
-        post_counter+=1
-        if post_counter > 5:
-            break
+    for post_tag in soup.find_all("div", class_="tm-article-snippet")[:5]:
         try:
-            link_tag = post.find("a", class_="tm-title__link")
+            link_tag = post_tag.find("a", class_="tm-title__link")
             if not link_tag:
                 continue
-
             title = link_tag.text.strip()
             href = "https://habr.com" + link_tag["href"]
 
-            rating_tag = post.find("span", class_="tm-votes-meter__value")
+            rating_tag = post_tag.find("span", class_="tm-votes-meter__value")
             rating = int(rating_tag.text.strip()) if rating_tag else 0
 
-            driver.get(href)
-            time.sleep(2)
-            article_soup = BeautifulSoup(driver.page_source, "lxml")
-            article_body = article_soup.find("div", id="post-content-body")
-            if not article_body:
+            art_resp = requests.get(href, headers=headers)
+            if art_resp.status_code != 200:
                 continue
-
-            content = article_body.get_text(separator="\n", strip=True)
-            articles.append({
-                "title": title,
-                "link": href,
-                "content": content,
-                "likes": rating
-            })
-
-            print(f"Добавлен пост: {title} | 👍 {rating}")
+            art_soup = BeautifulSoup(art_resp.text, "lxml")
+            body = art_soup.find("div", id="post-content-body")
+            if not body:
+                continue
+            content = body.get_text(separator="\n", strip=True)
+            articles.append({"title": title, "link": href, "content": content, "likes": rating})
         except Exception as e:
-            print(f"Ошибка при обработке поста: {e}")
+            print(f"Habr error processing post: {e}")
 
-    driver.quit()
-
-    top_articles = sorted(articles, key=lambda x: x["likes"], reverse=True)[:5]
-
-    combined_text = [
+    top = sorted(articles, key=lambda x: x["likes"], reverse=True)[:5]
+    return [
         f"Title: {a['title']}\nLink: {a['link']}\nLikes: {a['likes']}\nContent: {a['content']}"
-        for a in top_articles
+        for a in top
     ]
-
-    print(f"Выбрано топ-{len(combined_text)} постов по лайкам")
-    return combined_text
 
 
 def search_reddit(query: str):
-    url = "https://www.reddit.com/r/all/search.json"
-    params = {
-        "q": query,
-        "sort": "relevance", 
-        "limit": 5, 
-    }
-    
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"}
-    
-    response = requests.get(url, params=params, headers=headers)
-    
-    if response.status_code != 200:
-        raise Exception(f"Ошибка запроса: {response.status_code}")
-    
-    data = response.json()
-    combined_text = []
-    
-    print(f"Найдено элементов в API: {len(data['data']['children'])}")  # Отладка
-    for item in data["data"]["children"]:
-        try:
-            post_data = item["data"]
-            post_url = f"https://www.reddit.com{post_data['permalink']}"
-            post_title = post_data["title"]
-            post_text = post_data["selftext"]
-            post_comments = post_data["num_comments"]
-            
-            combined_text.append(f"Title: {post_title}\nLink: {post_url}\nText: {post_text}\nComments: {post_comments}")
-            print(f"Добавлен текст для {post_url}")  
-        except Exception as e:
-            print(f"Ошибка при обработке поста: {e}")
-    
-    print(f"Итоговый список текстов: {combined_text}") 
-    return combined_text
+    try:
+        import praw
+        client_id = os.getenv("REDDIT_CLIENT_ID")
+        client_secret = os.getenv("REDDIT_CLIENT_SECRET")
+        if client_id and client_secret:
+            reddit = praw.Reddit(
+                client_id=client_id,
+                client_secret=client_secret,
+                user_agent="RAG scraper by showee",
+            )
+            combined = []
+            for submission in reddit.subreddit("all").search(query, sort="relevance", limit=5):
+                combined.append(
+                    f"Title: {submission.title}\nLink: https://reddit.com{submission.permalink}\n"
+                    f"Text: {submission.selftext}\nComments: {submission.num_comments}"
+                )
+            return combined
+    except Exception as e:
+        print(f"PRAW failed, falling back to public API: {e}")
+
+    try:
+        url = "https://www.reddit.com/r/all/search.json"
+        params = {"q": query, "sort": "relevance", "limit": 5}
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        }
+        resp = requests.get(url, params=params, headers=headers, timeout=10)
+        if resp.status_code != 200:
+            print(f"Reddit API error: {resp.status_code}, trying old.reddit.com")
+            url = f"https://old.reddit.com/r/all/search.json"
+            resp = requests.get(url, params=params, headers=headers, timeout=10)
+            if resp.status_code != 200:
+                print(f"Reddit API still failing: {resp.status_code}")
+                return []
+
+        data = resp.json()
+        combined = []
+        for item in data.get("data", {}).get("children", []):
+            try:
+                p = item["data"]
+                combined.append(
+                    f"Title: {p['title']}\nLink: https://www.reddit.com{p['permalink']}\n"
+                    f"Text: {p['selftext']}\nComments: {p['num_comments']}"
+                )
+            except Exception as e:
+                print(f"Reddit error: {e}")
+        return combined
+    except Exception as e:
+        print(f"Reddit search failed: {e}")
+        return []
+
 
 def search_mailru(query: str):
     url = f"https://otvet.mail.ru/search/{query}"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
 
-    options = Options()
-    options.add_argument('--headless')
-    options.add_argument('--disable-gpu')
-    options.add_argument('--no-sandbox')
-    driver = webdriver.Chrome(options=options)
-    
-    driver.get(url)
-    time.sleep(3)  
+    resp = requests.get(url, headers=headers)
+    if resp.status_code != 200:
+        raise Exception(f"Mail.ru search error: {resp.status_code}")
 
-    soup = BeautifulSoup(driver.page_source, 'lxml')
-    posts = soup.find_all('div', class_="mMhMm")
-    
-    combined_text = []
-    
-    print(f"Найдено элементов в API: {len(posts)}")  
-    for post in posts:
+    soup = BeautifulSoup(resp.text, "lxml")
+    combined = []
+
+    for post in soup.find_all("div", class_="mMhMm")[:5]:
         try:
-            post=post.find('a', class_="KFtEM aR6dQ Ub4yk")
-            post_url = f"https://otvet.mail.ru{post['href']}"
-            post_title = post.get_text()
-            print(post_title)
-            driver.get(post_url)
+            link_tag = post.find("a", class_="KFtEM aR6dQ Ub4yk")
+            if not link_tag:
+                continue
+            post_url = "https://otvet.mail.ru" + link_tag["href"]
+            post_title = link_tag.get_text(strip=True)
 
-            soup = BeautifulSoup(driver.page_source, 'lxml')
-            question = soup.find('div', class_="aitWd PcSgH")
-            print("\nQuestion", question)
-            right_answer = soup.find('div', class_="aitWd _Jzbh")
-            print("\nRight_answer", right_answer)
-            if right_answer:
-                combined_text.append(f"Title: {post_title}\nLink: {post_url}\nQuestion: {question.get_text()}\nAnswer: {right_answer.get_text()}")
-                print(f"Добавлен текст для {url}")  
-            else:
-                print(f"Не найден блок ответа для {url}")
+            detail_resp = requests.get(post_url, headers=headers)
+            if detail_resp.status_code != 200:
+                continue
+            detail_soup = BeautifulSoup(detail_resp.text, "lxml")
+
+            question_tag = detail_soup.find("div", class_="aitWd PcSgH")
+            answer_tag = detail_soup.find("div", class_="aitWd _Jzbh")
+            q_text = question_tag.get_text(strip=True) if question_tag else ""
+            a_text = answer_tag.get_text(strip=True) if answer_tag else ""
+
+            combined.append(
+                f"Title: {post_title}\nLink: {post_url}\nQuestion: {q_text}\nAnswer: {a_text}"
+            )
         except Exception as e:
-            print(f"Ошибка при обработке поста: {e}")
-    
-    
-    print(f"Итоговый список текстов: {combined_text}")  
-    return combined_text
+            print(f"Mail.ru error: {e}")
+
+    return combined
+
 
 def search_geekforgeeks(query: str):
     search_url = f"https://www.geeksforgeeks.org/search/?q={query}"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
 
-    options = Options()
-    options.add_argument('--headless')
-    options.add_argument('--disable-gpu')
-    options.add_argument('--no-sandbox')
-    driver = webdriver.Chrome(options=options)
+    resp = requests.get(search_url, headers=headers)
+    if resp.status_code != 200:
+        raise Exception(f"GeeksForGeeks search error: {resp.status_code}")
 
-    driver.get(search_url)
-    time.sleep(3)  
+    soup = BeautifulSoup(resp.text, "lxml")
+    combined = []
 
-    soup = BeautifulSoup(driver.page_source, 'lxml')
-    
-    search_results = soup.find_all('div', class_="gcse-title")
-
-    print(f"Найдено элементов в API: {len(search_results)}")
-    combined_text = []
-
-    for item in search_results:
+    for item in soup.find_all("div", class_="gcse-title")[:5]:
         try:
-            title = item.find('div', class_="article-title")
-            link = title['href']
-            title_text = title.get_text(strip=True)
+            title_tag = item.find("div", class_="article-title")
+            if not title_tag:
+                continue
+            link = title_tag.get("href", "")
+            title_text = title_tag.get_text(strip=True)
 
-            response = requests.get(link)
+            art_resp = requests.get(link, headers=headers)
+            if art_resp.status_code != 200:
+                continue
+            art_soup = BeautifulSoup(art_resp.text, "lxml")
+            desc = art_soup.find("div", class_="article--viewer_content")
+            desc_text = desc.get_text(strip=True) if desc else ""
 
-            soup = BeautifulSoup(response, 'lxml')
-            discription = soup.find('div', class_="article--viewer_content")
-            print("\nDiscription", discription)
-            if discription:
-                combined_text.append(f"Title: {title_text}\nLink: {link}\nDiscription: {discription}")
-                print(f"Добавлен текст для {link}")
-            else:
-                print(f"Не найден блок ответа для {link}")
+            combined.append(
+                f"Title: {title_text}\nLink: {link}\nDiscription: {desc_text}"
+            )
         except Exception as e:
-            print(f"Ошибка при обработке элемента: {e}")
+            print(f"GeeksForGeeks error: {e}")
 
-    print(f"Итоговый список текстов: {combined_text}")  
-    return combined_text
+    return combined

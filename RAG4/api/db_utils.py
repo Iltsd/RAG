@@ -70,6 +70,32 @@ def get_all_documents():
     conn.close()
     return [dict(doc) for doc in documents]
 
+def create_tool_logs():
+    conn = get_db_connection()
+    conn.execute('''CREATE TABLE IF NOT EXISTS tool_logs
+                    (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                     session_id TEXT,
+                     tool_name TEXT,
+                     tool_args TEXT,
+                     tool_result TEXT,
+                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+    conn.close()
+
+def insert_tool_log(session_id, tool_name, tool_args, tool_result):
+    conn = get_db_connection()
+    conn.execute('INSERT INTO tool_logs (session_id, tool_name, tool_args, tool_result) VALUES (?, ?, ?, ?)',
+                 (session_id, tool_name, tool_args, tool_result[:1000]))
+    conn.commit()
+    conn.close()
+
+def get_tool_logs(session_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT tool_name, tool_args, tool_result, created_at FROM tool_logs WHERE session_id = ? ORDER BY created_at', (session_id,))
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return rows
+
 def get_all_chat_sessions():
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -86,3 +112,4 @@ def get_all_chat_sessions():
 
 create_application_logs()
 create_document_store()
+create_tool_logs()

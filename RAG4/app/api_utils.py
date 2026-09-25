@@ -1,4 +1,5 @@
 import requests
+import json
 import streamlit as st
 
 def get_api_response(question, session_id, model):
@@ -32,6 +33,72 @@ def get_api_response(question, session_id, model):
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
         return None
+
+def get_api_response_stream(question, session_id, model):
+    headers = {
+        'accept': 'text/event-stream',
+        'Content-Type': 'application/json'
+    }
+    data = {
+        "question": question,
+        "model": model,
+        "preprocessing_enabled": st.session_state.get("preprocessing_enabled", True),
+        "retrieval_enabled": st.session_state.get("retrieval_enabled", True),
+        "tools_enabled": st.session_state.get("tools_enabled", False),
+    }
+    if session_id:
+        data["session_id"] = session_id
+    selected_sites = st.session_state.get("selected_sites", [])
+    if selected_sites:
+        data["selected_sites"] = selected_sites
+
+    try:
+        if selected_sites:
+            forums_search(headers, data)
+
+        resp = requests.post(
+            "http://localhost:8000/chat/stream",
+            headers=headers,
+            json=data,
+            stream=True
+        )
+
+        if resp.status_code != 200:
+            st.error(f"Stream request failed: {resp.status_code} {resp.text}")
+            resp.close()
+            return
+
+        current_event = None
+        while True:
+            try:
+                raw_line = resp.raw.readline()
+            except Exception:
+                break
+            if not raw_line:
+                break
+            try:
+                line = raw_line.decode("utf-8").strip()
+            except UnicodeDecodeError:
+                continue
+            if not line:
+                continue
+            if line.startswith("event: "):
+                current_event = line[7:]
+            elif line.startswith("data: "):
+                payload = json.loads(line[6:])
+                if current_event == "done":
+                    yield {"session_id": payload["session_id"]}
+                elif current_event == "token":
+                    yield {"token": payload["token"]}
+                elif current_event == "tool_call":
+                    yield {"tool_call": payload}
+                elif current_event == "tool_result":
+                    yield {"tool_result": payload}
+                elif current_event == "tool_error":
+                    yield {"tool_error": payload}
+                current_event = None
+    except Exception as e:
+        st.error(f"Stream error: {str(e)}")
 
 def forums_search(headers, data):
     print("Parsing forums..." + data["question"])

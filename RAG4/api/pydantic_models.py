@@ -13,6 +13,9 @@ class QueryInput(BaseModel):
     session_id: str = Field(default=None)
     model: ModelName = Field(default=ModelName.LLAMA3_2)
     selected_sites: list = Field(default=None)
+    preprocessing_enabled: bool = Field(default=True)
+    retrieval_enabled: bool = Field(default=True)
+    tools_enabled: bool = Field(default=False)
 
 class QueryResponse(BaseModel):
     answer: str
