@@ -38,15 +38,16 @@ ENV/
 temp_*
 .coverage
 htmlcov/
-.pytest_cache/``
+.pytest_cache/
 .mypy_cache/
+.ruff_cache/
 
 # Database
 *.db
 *.sqlite3
 
 # Chroma
-api/chroma_db
+chroma_db/
 
 # Logs
 logs
@@ -84,3 +85,62 @@ node_modules/
 .taskmaster/
 specs/
 tasks/
+
+# --- Runtime / generated artifacts ---
+chroma_db/
+chroma.sqlite3
+*.onnx
+*.onnx.json
+*.gguf
+*.bin
+*.pickle
+*.pkl
+*.db
+*.db-journal
+*.sqlite3
+*.sqlite3-journal
+*.log
+logs/
+
+# --- Python caches / builds ---
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# --- Node ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- Secrets / credentials (Google Drive OAuth, API keys) ---
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+secrets.toml
+client_secret*.json
+credentials*.json
+token*.json
+service_account*.json
+*.pem
+*.key
+
+# --- Editors / OS ---
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
